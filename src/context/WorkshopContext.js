@@ -73,9 +73,23 @@ export const WorkshopProvider = ({ children }) => {
   const [threatHunting, setThreatHunting] = useState({
     aiSuggestedHypotheses: [],
     selectedHypothesis: '',
+    selectedIncidentType: '',
+    selectedRuleTypes: {
+      YARA: false,
+      SIGMA: false,
+      SPLUNK: false,
+      SNORT: false,
+      ELASTIC: false,
+      SURICATA: false,
+      MICROSOFT_DEFENDER: false,
+      CROWDSTRIKE: false,
+      SENTINEL_ONE: false,
+      WAZUH: false
+    },
     detectionRules: {
       yaraRule: '',
-      sigmaRule: ''
+      sigmaRule: '',
+      customRules: []
     },
     userFeedback: ''
   });
@@ -90,12 +104,10 @@ export const WorkshopProvider = ({ children }) => {
 
   // Progress tracking
   const [worksheetProgress, setWorksheetProgress] = useState({
-    worksheet1: 0,
-    worksheet2: 0,
-    worksheet3: 0,
-    worksheet4: 0,
-    worksheet5: 0,
-    worksheet6: 0
+    worksheet1: 0, // Analysis
+    worksheet2: 0, // Detection Rules
+    worksheet3: 0, // Automated Response
+    worksheet4: 0  // Intelligence Sharing
   });
 
   // User information

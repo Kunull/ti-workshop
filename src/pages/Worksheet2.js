@@ -1,445 +1,616 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Row, Col, Table, ListGroup, Badge, InputGroup } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { Container, Card, Form, Spinner, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
+import axios from 'axios';
 
 const Worksheet2 = () => {
-  const navigate = useNavigate();
   const { 
-    actorProfile, 
-    setActorProfile,
-    ttpChain,
-    setTtpChain,
     worksheetProgress,
     setWorksheetProgress
   } = useWorkshop();
+
+  // State for user input
+  const [securityContent, setSecurityContent] = useState('');
+  const [yaraRule, setYaraRule] = useState('');
   
-  // Initialize local state for backward compatibility
-  const [localActorProfile, setLocalActorProfile] = useState({
-    motivation: actorProfile.motivation || '',
-    capability: actorProfile.capabilities ? actorProfile.capabilities.length : 1,
-    ttps: actorProfile.ttps || [],
-    targetIndustries: [],
-    attributionConfidence: actorProfile.attributionConfidence || 1
+  // State for rule type selection
+  const [selectedRuleTypes, setSelectedRuleTypes] = useState({
+    YARA: true,
+    SIGMA: false,
+    SNORT: false,
+    SURICATA: false
   });
-
-  const [currentStep, setCurrentStep] = useState(1);
-
-  // Actor intelligence data
-  const actorData = {
-    observedActivity: `
-      Recent campaigns targeting financial institutions with sophisticated spear-phishing emails.
-      Uses custom malware called "DarkVault" that targets banking applications.
-      Infrastructure leverages compromised WordPress sites as command and control servers.
-      Exfiltrates data using encrypted channels to cloud storage services.
-      Shows high operational security, rotating infrastructure regularly.
-      Active hours suggest operators in Eastern Europe time zones.
-      Uses living-off-the-land techniques to avoid detection.
-      Some code comments found in Russian language.
-    `,
-    recentIncidents: [
-      "March 2025: Targeted 15 banks across Europe with spear-phishing campaign",
-      "January 2025: Compromised a financial service provider's update server",
-      "November 2024: Targeted cryptocurrency exchanges with watering hole attacks"
-    ],
-    toolsObserved: [
-      "DarkVault custom banking malware",
-      "Modified Cobalt Strike",
-      "PowerShell Empire",
-      "Custom exfiltration tools",
-      "Credential harvesting scripts"
-    ]
+  
+  // State for API response handling
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [apiResponse, setApiResponse] = useState(null);
+  
+  // State for polling
+  const [isPolling, setIsPolling] = useState(false);
+  const [messageId, setMessageId] = useState(null);
+  const [pollCount, setPollCount] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
+  const [processingSteps, setProcessingSteps] = useState([]);
+  
+  // State for raw response data display
+  const [pollResponses, setPollResponses] = useState([]);
+  const [extractedData, setExtractedData] = useState(null);
+  const [researchQuery, setResearchQuery] = useState('');
+  const [researchReport, setResearchReport] = useState(null);
+  const [extractedResearchData, setExtractedResearchData] = useState(null);
+  const [collectedRules, setCollectedRules] = useState([]);
+  
+  // State for view mode (input or output)
+  const [viewMode, setViewMode] = useState('input');
+  
+  // Helper function to create a delay
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  // Function to make a single poll request
+  const makePollRequest = async (msgId) => {
+    const pollEndpoint = 'https://r90guxvefb.execute-api.us-east-2.amazonaws.com/v1/poll';
+    
+    try {
+      // Log the request being made (similar to what's shown in the screenshot)
+      console.log(`Polling for results with messageId: ${msgId}, attempt ${pollCount + 1}`);
+      
+      const response = await axios.get(pollEndpoint, {
+        params: { messageId: msgId }
+      });
+      
+      // Log the response as seen in the TDL creator frontend
+      console.log('Poll response:', response.data);
+      
+      // Store the poll response for display
+      setPollResponses(prev => [...prev, response.data]);
+      
+      // Check for the "Still processing, continuing to poll..." scenario
+      if (response.data.status === 'PROCESSING' || 
+          (response.data.currentStep && 
+           response.data.currentStep !== 'research_started')) {
+        console.log('Still processing, continuing to poll...');
+      }
+      
+      // Extract data if available
+      if (response.data.extractedData) {
+        setExtractedData(response.data.extractedData);
+      }
+      
+      // Store research query if available
+      if (response.data.researchQuery) {
+        setResearchQuery(response.data.researchQuery);
+      }
+      
+      // Store research report if available
+      if (response.data.researchResults) {
+        setResearchReport(response.data.researchResults);
+      }
+      
+      // Store extracted research data if available
+      if (response.data.extractedResearchData) {
+        setExtractedResearchData(response.data.extractedResearchData);
+      }
+      
+      // Check for rules in the response - these are the actual rules we want to display
+      if (response.data.rules && response.data.rules.length > 0) {
+        console.log('Found rules in poll response:', response.data.rules);
+        
+        // Simply update the API response with the rules from this response
+        setApiResponse(prevResponse => {
+          // If we don't have a previous response, create a new one
+          if (!prevResponse) {
+            return {
+              status: 'PROCESSING',
+              rules: response.data.rules
+            };
+          }
+          
+          // Otherwise, replace the rules with the new ones
+          return {
+            ...prevResponse,
+            rules: response.data.rules
+          };
+        });
+      }
+      
+      // Check for rule decisions in the response - just log them, don't display
+      if (response.data.ruleDecisions && response.data.ruleDecisions.length > 0) {
+        console.log('Found rule decisions in poll response:', response.data.ruleDecisions);
+        // Don't display rule decisions, they're just indicators
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error during polling:', error);
+      return null;
+    }
+  };
+  
+  // Function to poll for results
+  const pollForResults = async (msgId) => {
+    // Set up polling state
+    setIsPolling(true);
+    setMessageId(msgId);
+    setPollCount(0);
+    setProcessingSteps([]);
+    setPollResponses([]);
+    setCollectedRules([]);
+    
+    // Set initial current step
+    setCurrentStep('Starting polling...');
+    
+    let maxPolls = 30; // Maximum number of polling attempts
+    let pollInterval = 3000; // Polling interval in ms
+    let currentPoll = 0;
+    let timeoutId = null;
+    
+    // Function to perform a single poll cycle
+    const pollCycle = async () => {
+      currentPoll++;
+      setPollCount(currentPoll);
+      
+      try {
+        // Make the poll request
+        const data = await makePollRequest(msgId);
+        
+        if (data) {
+          // Update current step if available
+          if (data.currentStep) {
+            setCurrentStep(data.currentStep);
+            
+            // Add to processing steps if not already there
+            setProcessingSteps(prev => {
+              if (!prev.includes(data.currentStep)) {
+                return [...prev, data.currentStep];
+              }
+              return prev;
+            });
+          }
+          
+          // Process the response and update UI
+          const isDone = processResponseAndUpdateUI(data);
+          
+          // If polling is complete, stop
+          if (isDone) {
+            console.log('Polling complete after', currentPoll, 'attempts');
+            setIsPolling(false);
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Check if we've reached the maximum number of polls
+        if (currentPoll >= maxPolls) {
+          console.log('Reached maximum number of polls:', maxPolls);
+          setIsPolling(false);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Schedule the next poll
+        timeoutId = setTimeout(pollCycle, pollInterval);
+      } catch (error) {
+        console.error('Error during poll cycle:', error);
+        // setCurrentStep(`Error during polling attempt ${currentPoll}, retrying...`);
+        
+        // Continue polling despite errors
+        timeoutId = setTimeout(pollCycle, pollInterval);
+      }
+    };
+    
+    // Process response and update UI immediately with any new rules
+    const processResponseAndUpdateUI = (data) => {
+      // Handle case where data might be directly in the response
+      if (!data) return false;
+      
+      // Check for rule decisions directly in the data - just log them, don't display
+      if (data.ruleDecisions && data.ruleDecisions.length > 0) {
+        console.log('Found rule decisions in processResponseAndUpdateUI:', data.ruleDecisions);
+        // Don't display rule decisions, they're just indicators
+      }
+      
+      // Handle rules in the data
+      if (data.rules && data.rules.length > 0) {
+        // Standard format with rules array
+        // Add new rules to our collection if they don't already exist
+        const newRules = data.rules.filter(newRule => 
+          !collectedRules.some(existingRule => 
+            JSON.stringify(existingRule) === JSON.stringify(newRule)
+          )
+        );
+        
+        if (newRules.length > 0) {
+          // Update our collection with the new rules
+          const updatedRules = [...collectedRules, ...newRules];
+          setCollectedRules(updatedRules);
+          
+          // Update the UI immediately with the new rules
+          setApiResponse({
+            ...data,
+            rules: updatedRules
+          });
+          
+          // Set the first YARA rule if available
+          const yaraRule = newRules.find(r => r.rule_type === 'YARA');
+          if (yaraRule) {
+            setYaraRule(yaraRule.rule_content || yaraRule.rule || '');
+          }
+        }
+        
+        // Only stop polling if we have a COMPLETED status
+        if (data.status === 'COMPLETED') {
+          return true; // Polling complete
+        }
+        return false; // Continue polling
+      } else if (data.rule) {
+        // Format with a single rule
+        setYaraRule(data.rule);
+        setApiResponse(data);
+        
+        // Only stop polling if we have a COMPLETED status
+        if (data.status === 'COMPLETED') {
+          return true; // Polling complete
+        }
+        return false; // Continue polling
+      } else {
+        // If we don't have rules in the expected format, just show what we got
+        // Don't generate a sample rule
+        setApiResponse(data);
+        
+        // Continue polling instead of showing a sample rule
+        return false; // Indicate polling should continue
+      }
+      
+      // If we've reached here, continue polling
+      return false;
+    };
+    
+    // Start the first poll cycle
+    pollCycle();
+    
+    // Clean up on unmount
+    return () => {
+      clearTimeout(timeoutId);
+    };
   };
 
-  // TTP options
-  const ttpOptions = [
-    { id: "T1566", name: "Phishing", tactic: "Initial Access" },
-    { id: "T1189", name: "Drive-by Compromise", tactic: "Initial Access" },
-    { id: "T1195", name: "Supply Chain Compromise", tactic: "Initial Access" },
-    { id: "T1078", name: "Valid Accounts", tactic: "Defense Evasion, Persistence, Privilege Escalation, Initial Access" },
-    { id: "T1053", name: "Scheduled Task/Job", tactic: "Execution, Persistence, Privilege Escalation" },
-    { id: "T1059", name: "Command and Scripting Interpreter", tactic: "Execution" },
-    { id: "T1027", name: "Obfuscated Files or Information", tactic: "Defense Evasion" },
-    { id: "T1082", name: "System Information Discovery", tactic: "Discovery" },
-    { id: "T1005", name: "Data from Local System", tactic: "Collection" },
-    { id: "T1119", name: "Automated Collection", tactic: "Collection" },
-    { id: "T1048", name: "Exfiltration Over Alternative Protocol", tactic: "Exfiltration" },
-    { id: "T1567", name: "Exfiltration Over Web Service", tactic: "Exfiltration" },
-  ];
+  // Helper function to generate a sample YARA rule based on user input and malware name
+  const generateSampleRule = (content, malwareName = '') => {
+    // Extract potential keywords from the content
+    const keywords = content.split(/\\s+/)
+      .filter(word => word.length > 4)
+      .filter(word => !['and', 'the', 'that', 'with', 'from', 'this', 'these', 'those', 'they', 'their'].includes(word.toLowerCase()))
+      .slice(0, 5);
+    
+    // Get current date for the rule
+    const date = new Date().toISOString().split('T')[0];
+    
+    // Generate a rule name based on malware name or default
+    const ruleName = malwareName ? 
+      `${malwareName.replace(/[^a-zA-Z0-9]/g, '_')}_Detection` : 
+      'Demo_Detection_Rule';
+    
+    return `rule ${ruleName} {
+meta:
+    author = "Threat Intel Workshop"
+    description = "Demo rule generated from user content"
+    date = "${date}"
+    reference = "https://example.com/threat-intel"
+    
+strings:
+    $str1 = "${keywords[0] || 'malware'}" nocase
+    $str2 = "${keywords[1] || 'threat'}" nocase
+    $str3 = "${keywords[2] || 'attack'}" nocase
+    
+    // Binary pattern example
+    $hex1 = { 4D 5A 90 00 03 00 00 00 }
+    
+condition:
+    uint16(0) == 0x5A4D and // PE file check
+    filesize < 1MB and
+    (2 of ($str*) or $hex1)
+}`;
+  };
 
-  // Industry options
-  const industryOptions = [
-    "Financial Services",
-    "Healthcare",
-    "Government",
-    "Energy",
-    "Manufacturing",
-    "Retail",
-    "Transportation",
-    "Technology",
-    "Telecommunications",
-    "Education"
-  ];
-
-  // Calculate progress
+  // Function to handle the "Use AI" button click
+  const handleUseAI = async (e) => {
+    e.preventDefault();
+    
+    if (!securityContent.trim()) {
+      setError('Please enter security content to generate detection rules.');
+      return;
+    }
+    
+    // Check if at least one rule type is selected
+    const selectedTypes = Object.keys(selectedRuleTypes).filter(type => selectedRuleTypes[type]);
+    if (selectedTypes.length === 0) {
+      setError('Please select at least one rule type.');
+      return;
+    }
+    
+    // Reset all states and switch to output view
+    setIsLoading(true);
+    setError(null);
+    setApiResponse(null);
+    setYaraRule('');
+    setPollResponses([]);
+    setExtractedData(null);
+    setResearchQuery('');
+    setResearchReport(null);
+    setExtractedResearchData(null);
+    setCollectedRules([]);
+    setProcessingSteps([]);
+    setCurrentStep('');
+    
+    // Clear any stored rule contents
+    window.ruleContentsSet = new Set();
+    
+    setViewMode('output');
+    
+    try {
+      // Log the submission (as seen in the screenshot)
+      console.log('Submitting content directly to API Gateway...');
+      
+      // Make the initial API call to request rule generation
+      const apiEndpoint = 'https://r90guxvefb.execute-api.us-east-2.amazonaws.com/v1/detection-rules';
+      
+      const response = await axios.post(apiEndpoint, {
+        security_content: securityContent,
+        user_rule_preference: selectedTypes.join(',')
+      });
+      
+      // Log the response as seen in the TDL creator frontend
+      console.log('API response received:', response.data);
+      console.log('Response data:', response.data);
+      
+      console.log('Initial API response:', response.data);
+      
+      // Check response format and handle accordingly
+      if (response.data.messageSent === true && response.data.messageId) {
+        // Asynchronous processing - we got a messageId for polling
+        const messageId = response.data.messageId;
+        console.log(`Request accepted with message ID: ${messageId}`);
+        
+        // Start polling for results
+        console.log(`Starting to poll for results with message ID: ${messageId}`);
+        
+        // Use the polling function to get updates
+        pollForResults(messageId);
+      } else if (response.data.rule || (response.data.rules && response.data.rules.length > 0)) {
+        // Immediate response with rule(s)
+        setApiResponse(response.data);
+        
+        if (response.data.rule) {
+          setYaraRule(response.data.rule);
+        } else if (response.data.rules) {
+          const yaraRule = response.data.rules.find(r => r.rule_type === 'YARA');
+          if (yaraRule) {
+            setYaraRule(yaraRule.rule_content || yaraRule.rule || '');
+          }
+        }
+        
+        setIsLoading(false);
+      } else {
+        // Unexpected response format
+        throw new Error('Unexpected API response format');
+      }
+    } catch (error) {
+      console.error('Error in initial request:', error);
+      
+      // Show the error and allow the user to try again
+      setError('Error connecting to the rule generation service: ' + 
+              (error.response?.data?.message || error.message));
+      setIsLoading(false);
+      setViewMode('input'); // Return to input view to let the user try again
+    }
+  };
+  
+  // Update progress when YARA rule content or security content changes
   useEffect(() => {
     let progress = 0;
     
-    // Check motivation selection
-    if (localActorProfile.motivation) progress += 20;
+    // Calculate progress based on content
+    if (securityContent.length > 10) progress += 50;
+    if (yaraRule.length > 50) progress += 50;
     
-    // Check capability rating
-    if (localActorProfile.capability > 1) progress += 20;
-    
-    // Check TTPs selection
-    if (localActorProfile.ttps.length > 0) progress += 20;
-    
-    // Check target industries selection
-    if (localActorProfile.targetIndustries.length > 0) progress += 20;
-    
-    // Check attribution confidence
-    if (localActorProfile.attributionConfidence > 1) progress += 20;
-    
-    // Update new context structure
-    setActorProfile({
-      motivation: localActorProfile.motivation,
-      capabilities: localActorProfile.capability > 1 ? ['Moderate', 'Advanced', 'Sophisticated'].slice(0, localActorProfile.capability - 1) : [],
-      ttps: localActorProfile.ttps,
-      relationshipToOtherActors: 'Potential links to state-sponsored groups',
-      attributionConfidence: localActorProfile.attributionConfidence
-    });
-    
-    setWorksheetProgress({
-      ...worksheetProgress,
-      worksheet2: progress
-    });
-  }, [localActorProfile, setActorProfile, worksheetProgress, setWorksheetProgress]);
-
-  // Handle profile changes
-  const handleProfileChange = (field, value) => {
-    setLocalActorProfile({
-      ...localActorProfile,
-      [field]: value
-    });
-  };
-
-  // Handle TTP selection
-  const handleTTPSelection = (ttpId) => {
-    const updatedTTPs = [...localActorProfile.ttps];
-    
-    if (updatedTTPs.includes(ttpId)) {
-      // Remove if already selected
-      const index = updatedTTPs.indexOf(ttpId);
-      updatedTTPs.splice(index, 1);
-    } else {
-      // Add if not already selected
-      updatedTTPs.push(ttpId);
-    }
-    
-    setLocalActorProfile({
-      ...localActorProfile,
-      ttps: updatedTTPs
-    });
-    
-    // Also update the ttpChain for the new context structure
-    if (updatedTTPs.length > 0) {
-      setTtpChain({
-        ...ttpChain,
-        attackFlow: updatedTTPs.map(id => {
-          const ttp = ttpOptions.find(t => t.id === id);
-          return { id, name: ttp.name, tactic: ttp.tactic };
-        })
+    // Only update if progress has changed
+    if (worksheetProgress.worksheet2 !== progress) {
+      setWorksheetProgress({
+        ...worksheetProgress,
+        worksheet2: progress
       });
     }
-  };
-
-  // Handle industry selection
-  const handleIndustrySelection = (industry) => {
-    const updatedIndustries = [...localActorProfile.targetIndustries];
-    
-    if (updatedIndustries.includes(industry)) {
-      // Remove if already selected
-      const index = updatedIndustries.indexOf(industry);
-      updatedIndustries.splice(index, 1);
-    } else {
-      // Add if not already selected
-      updatedIndustries.push(industry);
-    }
-    
-    setLocalActorProfile({
-      ...localActorProfile,
-      targetIndustries: updatedIndustries
+  }, [securityContent, yaraRule, worksheetProgress, setWorksheetProgress]);
+  
+  // Function to handle rule type selection
+  const handleRuleTypeChange = (ruleType) => {
+    setSelectedRuleTypes({
+      ...selectedRuleTypes,
+      [ruleType]: !selectedRuleTypes[ruleType]
     });
   };
-
-  // Handle next step
-  const handleNextStep = () => {
-    if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Final update of the ttpChain before navigation
-      setTtpChain({
-        ...ttpChain,
-        userAssessment: `Actor appears to be a ${localActorProfile.motivation.toLowerCase()} group with ${localActorProfile.capability > 3 ? 'sophisticated' : 'moderate'} capabilities, primarily targeting ${localActorProfile.targetIndustries.join(', ')} sectors.`
-      });
-      navigate('/worksheet-3');
-    }
-  };
-
-  // Handle previous step
-  const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      navigate('/worksheet-1');
-    }
-  };
-
+  
   return (
-    <Container>
-      <Row className="justify-content-md-center mt-4 mb-5">
-        <Col md={10}>
-          <Card className="shadow">
-            <Card.Header as="h4" className="bg-primary text-white">
-              Worksheet 2: Threat Actor Profiling
-            </Card.Header>
-            <Card.Body>
-              <div className="mb-4 p-3 bg-light border">
-                <h5>Threat Intelligence Summary</h5>
-                <p style={{ whiteSpace: 'pre-line' }}>{actorData.observedActivity}</p>
-                
-                <h6>Recent Incidents:</h6>
-                <ListGroup className="mb-3">
-                  {actorData.recentIncidents.map((incident, index) => (
-                    <ListGroup.Item key={index}>{incident}</ListGroup.Item>
-                  ))}
-                </ListGroup>
-                
-                <h6>Observed Tools:</h6>
+    <Container className="my-4">
+      {viewMode === 'input' ? (
+        <Card className="mb-4">
+          <Card.Header className="bg-primary text-white">
+            <h4>Worksheet 2: Detection Rule Generation</h4>
+          </Card.Header>
+          <Card.Body>
+            <p>
+              In this worksheet, you'll learn how to generate detection rules from security content using AI.
+              Enter security information about a threat, and the system will generate appropriate detection rules.
+            </p>
+            
+            <Form onSubmit={handleUseAI}>
+              <Form.Group className="mb-3">
+                <Form.Label>Security Content</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={6}
+                  value={securityContent}
+                  onChange={(e) => setSecurityContent(e.target.value)}
+                  placeholder="Enter security content, threat information, or malware details here..."
+                />
+                <Form.Text className="text-muted">
+                  The more detailed information you provide, the better the detection rules will be.
+                </Form.Text>
+              </Form.Group>
+              
+              <Form.Group className="mb-3">
+                <Form.Label>Rule Types</Form.Label>
                 <div>
-                  {actorData.toolsObserved.map((tool, index) => (
-                    <Badge 
-                      key={index} 
-                      bg="secondary" 
-                      className="me-2 mb-2 p-2"
-                    >
-                      {tool}
-                    </Badge>
+                  {Object.keys(selectedRuleTypes).map(ruleType => (
+                    <Form.Check
+                      key={ruleType}
+                      inline
+                      type="checkbox"
+                      id={`rule-type-${ruleType}`}
+                      label={ruleType}
+                      checked={selectedRuleTypes[ruleType]}
+                      onChange={() => handleRuleTypeChange(ruleType)}
+                    />
                   ))}
                 </div>
+                <Form.Text className="text-muted">
+                  Select the types of detection rules you want to generate.
+                </Form.Text>
+              </Form.Group>
+              
+              {error && (
+                <Alert variant="danger" className="mt-3">
+                  {error}
+                </Alert>
+              )}
+              
+              <div className="d-flex justify-content-end">
+                <button type="submit" className="btn btn-primary">
+                  Use AI to Generate Rules
+                </button>
               </div>
-            
-              {currentStep === 1 && (
-                <>
-                  <h5>Profile Components</h5>
-                  <Form>
-                    <Row>
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label><strong>1. Primary Motivation</strong></Form.Label>
-                          <div>
-                            {['Financial gain', 'Espionage', 'Disruption/Destruction', 'Hacktivism', 'Unknown'].map((motivation) => (
-                              <Form.Check
-                                key={motivation}
-                                type="radio"
-                                id={`motivation-${motivation}`}
-                                label={motivation}
-                                name="motivation"
-                                checked={actorProfile.motivation === motivation}
-                                onChange={() => handleProfileChange('motivation', motivation)}
-                              />
-                            ))}
-                          </div>
-                        </Form.Group>
-                      </Col>
-                      
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label><strong>2. Capability Assessment (1-5)</strong></Form.Label>
-                          <Form.Range 
-                            value={localActorProfile.capability} 
-                            onChange={(e) => handleProfileChange('capability', parseInt(e.target.value))}
-                            min="1"
-                            max="5"
-                            step="1"
-                          />  
-                          <div className="d-flex justify-content-between">
-                            <small>Basic</small>
-                            <small>Advanced</small>
-                          </div>
-                          <div className="text-center mt-2">
-                            <Badge bg="primary" pill>
-                              Level: {localActorProfile.capability}
-                            </Badge>
-                          </div>
-                        </Form.Group>
-                      </Col>
-                    </Row>
-                  
-                    <Form.Group className="mb-3">
-                      <Form.Label><strong>3. Key TTPs (Select all that apply)</strong></Form.Label>
-                      <div className="d-flex flex-wrap">
-                        {ttpOptions.map((ttp) => (
-                          <div key={ttp.id} className="me-3 mb-2" style={{ minWidth: '180px' }}>
-                            <Form.Check
-                              type="checkbox"
-                              id={`ttp-${ttp.id}`}
-                              label={`${ttp.id}: ${ttp.name} (${ttp.tactic})`}
-                              checked={localActorProfile.ttps.includes(ttp.id)}
-                              onChange={() => handleTTPSelection(ttp.id)}
-                              className="mb-2"
-                            />
-                            <small className="text-muted d-block">
-                              {ttp.tactic}
-                            </small>
-                          </div>
+            </Form>
+          </Card.Body>
+        </Card>
+      ) : (
+        <Card className="mb-4">
+          <Card.Header className="bg-primary text-white">
+            <h4>Detection Rules Output</h4>
+          </Card.Header>
+          <Card.Body>
+            {isLoading ? (
+              <div className="text-center my-5">
+                <Spinner animation="border" role="status" variant="primary">
+                  <span className="visually-hidden">Loading...</span>
+                </Spinner>
+                <div className="mt-3">
+                  <h5>Generating detection rules...</h5>
+                  {currentStep && (
+                    <p className="text-muted">{currentStep}</p>
+                  )}
+                  {processingSteps.length > 0 && (
+                    <div className="mt-3 text-start">
+                      <h6>Processing Steps:</h6>
+                      <ul className="list-group">
+                        {processingSteps.map((step, index) => (
+                          <li key={index} className="list-group-item">
+                            {step}
+                          </li>
                         ))}
-                      </div>
-                    </Form.Group>
-                  </Form>
-                </>
-              )}
-              
-              {currentStep === 2 && (
-                <>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label><strong>4. Target Industries</strong></Form.Label>
-                        <div className="d-flex flex-wrap">
-                          {industryOptions.map((industry) => (
-                            <div key={industry} className="me-3 mb-2" style={{ minWidth: '180px' }}>
-                              <Form.Check
-                                type="checkbox"
-                                id={`industry-${industry}`}
-                                label={industry}
-                                checked={localActorProfile.targetIndustries.includes(industry)}
-                                onChange={() => handleIndustrySelection(industry)}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </Form.Group>
-                    </Col>
-                    
-                    <Col md={6}>
-                      <Form.Group className="mb-4">
-                        <Form.Label><strong>5. Attribution Confidence (1-5)</strong></Form.Label>
-                        <Form.Range 
-                          value={localActorProfile.attributionConfidence} 
-                          onChange={(e) => handleProfileChange('attributionConfidence', parseInt(e.target.value))}
-                          min="1"
-                          max="5"
-                          step="1"
-                        />
-                        <div className="d-flex justify-content-between">
-                          <small>Low Confidence</small>
-                          <small>High Confidence</small>
-                        </div>
-                        <div className="text-center mt-2">
-                          <Badge bg="primary" pill>
-                            Level: {localActorProfile.attributionConfidence}
-                          </Badge>
-                        </div>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  
-                  <div className="mt-4 p-3 bg-light">
-                    <h5>Actor Profile Summary</h5>
-                    <Table bordered size="sm">
-                      <tbody>
-                        <tr>
-                          <th width="30%">Motivation:</th>
-                          <td>{localActorProfile.motivation || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <th>Capability:</th>
-                          <td>{localActorProfile.capability}/5</td>
-                        </tr>
-                        <tr>
-                          <th>Primary TTPs:</th>
-                          <td>
-                            {localActorProfile.ttps.length > 0 ? (
-                              <div className="d-flex flex-wrap">
-                                {localActorProfile.ttps.map(ttpId => {
-                                  const ttp = ttpOptions.find(t => t.id === ttpId);
-                                  return (
-                                    <Badge 
-                                      key={ttpId} 
-                                      bg="info" 
-                                      className="me-1 mb-1 p-1"
-                                    >
-                                      {ttp.id}: {ttp.name}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            ) : "None selected"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Target Industries:</th>
-                          <td>
-                            {localActorProfile.targetIndustries.length > 0 ? (
-                              <div className="d-flex flex-wrap">
-                                {localActorProfile.targetIndustries.map(industry => (
-                                  <Badge 
-                                    key={industry} 
-                                    bg="secondary" 
-                                    className="me-1 mb-1 p-1"
-                                  >
-                                    {industry}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : "None selected"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Attribution Confidence:</th>
-                          <td>{localActorProfile.attributionConfidence}/5</td>
-                        </tr>
-                      </tbody>
-                    </Table>
-                  </div>
-                </>
-              )}
-              
-              <div className="d-flex justify-content-between mt-4">
-                {currentStep === 1 ? (
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => window.location.href = '/worksheet-1'}
-                  >
-                    Previous Exercise
-                  </Button>
-                ) : (
-                  <Button variant="secondary" onClick={handlePrevStep}>Previous Step</Button>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                {error && (
+                  <Alert variant="danger" className="mb-4">
+                    {error}
+                  </Alert>
                 )}
                 
-                {currentStep === 2 ? (
-                  <Button 
-                    variant="primary" 
-                    onClick={() => window.location.href = '/worksheet-3'}
-                    disabled={localActorProfile.attributionConfidence < 1}
-                  >
-                    Next Exercise
-                  </Button>
-                ) : (
-                  <Button variant="primary" onClick={handleNextStep}>Next Step</Button>
+                {extractedData && (
+                  <div className="mb-3">
+                    <h5>Extracted Data:</h5>
+                    <pre className="bg-light p-3 rounded" style={{ maxHeight: '200px', overflow: 'auto' }}>
+                      <code>{JSON.stringify(extractedData, null, 2)}</code>
+                    </pre>
+                  </div>
+                )}
+                
+                {researchQuery && (
+                  <div className="mb-3">
+                    <h5>Research Query:</h5>
+                    <p className="p-3 bg-light rounded">{researchQuery}</p>
+                  </div>
+                )}
+                
+                {researchReport && (
+                  <div className="mb-3">
+                    <h5>Research Report:</h5>
+                    <div className="p-3 bg-light rounded" style={{ maxHeight: '300px', overflow: 'auto' }}>
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{researchReport}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {extractedResearchData && (
+                  <div className="mb-3">
+                    <h5>Extracted Research Data:</h5>
+                    <pre className="bg-light p-3 rounded" style={{ maxHeight: '300px', overflow: 'auto' }}>
+                      <code>{JSON.stringify(extractedResearchData, null, 2)}</code>
+                    </pre>
+                  </div>
+                )}
+                
+                {/* Display rules as they are received from the API */}
+                {apiResponse && apiResponse.rules && apiResponse.rules.length > 0 && (
+                  <div className="mb-3">
+                    <h6>Generated Rules:</h6>
+                    {apiResponse.rules.map((rule, index) => {
+                      // Extract rule content and type
+                      const ruleContent = typeof rule === 'string' ? rule : 
+                                        rule.rule_content ? rule.rule_content : 
+                                        rule.rule ? rule.rule : 
+                                        JSON.stringify(rule, null, 2);
+                      
+                      const ruleType = rule.rule_type || 'YARA';
+                      
+                      return (
+                        <div key={index} className="mb-3">
+                          <h6>{ruleType} Rule {index + 1}</h6>
+                          <pre className="bg-light p-3 rounded" style={{ 
+                            whiteSpace: 'pre', 
+                            overflow: 'auto', 
+                            maxHeight: '300px', 
+                            margin: 0,
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            padding: '15px',
+                            backgroundColor: '#f8f9fa',
+                            border: '1px solid #eaecef',
+                            borderRadius: '6px'
+                          }}>
+                            <code>{ruleContent}</code>
+                          </pre>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-            </Card.Body>
-            <Card.Footer>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>Step {currentStep} of 2</div>
-                <div>Worksheet Progress: {worksheetProgress.worksheet2}%</div>
-              </div>
-            </Card.Footer>
-          </Card>
-        </Col>
-      </Row>
+            )}
+          </Card.Body>
+        </Card>
+      )}
+      
+      <div className="d-flex justify-content-between">
+        <Link to="/worksheet-1" className="btn btn-secondary">Previous: Analysis</Link>
+        <Link to="/worksheet-3" className="btn btn-primary">Next: Automated Response</Link>
+      </div>
     </Container>
   );
 };

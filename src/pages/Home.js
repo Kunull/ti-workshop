@@ -40,18 +40,18 @@ const Home = () => {
             Taking Action in a Noisy World
           </h2>
           <p className="lead mb-4" style={{ color: 'var(--cyware-gray)' }}>
-            A Day in the Life of an Intel Analyst (with GenAI Integration)
+            A Day in the Life of an Intel Analyst: Lumma Stealer Analysis Workshop
           </p>
         </Col>
       </Row>
 
       <Row className="justify-content-md-center">
-        <Col md={8} lg={7}>
+        <Col md={8}>
           <Card className="shadow border-0">
             <Card.Body className="p-0">
               <Row className="g-0">
                 {/* Left Side - Info Section */}
-                <Col md={5} className="bg-gradient p-4" style={{ background: 'var(--cyware-gradient)' }}>
+                {/* <Col md={5} className="bg-gradient p-4" style={{ background: 'var(--cyware-gradient)' }}>
                   <div className="text-white h-100 d-flex flex-column justify-content-between">
                     <div>
                       <h4 className="fw-bold mb-4">Workshop Overview</h4>
@@ -152,10 +152,10 @@ const Home = () => {
                       </p>
                     </div>
                   </div>
-                </Col>
+                </Col> */}
                 
-                {/* Right Side - Form */}
-                <Col md={7}>
+                {/* Form Section - Full Width */}
+                <Col md={12}>
                   <div className="p-4 p-lg-5">
                     {!formSubmitted ? (
                       <>

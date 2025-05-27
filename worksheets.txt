@@ -1,0 +1,16 @@
+# Analysis
+Extract TTPs, 
+Extract IOCs
+Extract TAs
+
+
+# Detection rules
+Create detection rules for the IOCs
+
+
+# Automated response
+Playbook screenshots with sample script
+
+
+# Intelligence Sharing
+Format intelligence in STIX 2.1 for sharing

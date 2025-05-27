@@ -253,9 +253,8 @@ The security team is available to help verify any suspicious communications. Whe
       <Row className="justify-content-center">
         <Col lg={10}>
           <Card className="shadow-sm">
-            <Card.Header className="bg-gradient" style={{ background: 'var(--cyware-gradient)' }}>
-              <h4 className="mb-0 text-white">Exercise 6: Reporting & Knowledge Sharing</h4>
-              <div className="text-white-50 small">Leveraging GenAI for enhanced threat intelligence reporting</div>
+            <Card.Header as="h4" className="bg-primary text-white">
+              Exercise 6: Reporting & Knowledge Sharing
             </Card.Header>
             <Card.Body className="p-4">
               

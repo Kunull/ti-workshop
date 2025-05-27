@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Row, Col, Table } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { Container, Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
 
 const Worksheet1 = () => {
-  const navigate = useNavigate();
+
   const { 
     threatLandscape,
     setThreatLandscape,
@@ -12,389 +12,509 @@ const Worksheet1 = () => {
     setWorksheetProgress
   } = useWorkshop();
   
-  // Initialize local state to replace old context variables
-  const [feedScores, setFeedScores] = useState({
-    feedA: { reliability: 0, relevance: 0, actionability: 0, timeliness: 0 },
-    feedB: { reliability: 0, relevance: 0, actionability: 0, timeliness: 0 },
-    feedC: { reliability: 0, relevance: 0, actionability: 0, timeliness: 0 },
-  });
-  const [priorityMatrix, setPriorityMatrix] = useState({
-    highRelevanceHighReliability: [],
-    highRelevanceLowReliability: [],
-    lowRelevanceHighReliability: [],
-    lowRelevanceLowReliability: []
-  });
-  const [topFeedJustification, setTopFeedJustification] = useState('');
-
-  // Local state for drag and drop functionality
-  const [draggingFeed, setDraggingFeed] = useState(null);
-  const [currentStep, setCurrentStep] = useState(1);
+  // Initialize state for analysis fields
+  const [ttpAnalysis, setTtpAnalysis] = useState('');
+  const [iocAnalysis, setIocAnalysis] = useState('');
+  const [threatActorAnalysis, setThreatActorAnalysis] = useState('');
   
-  // Feed data
-  const feedData = {
-    feedA: {
-      name: "DarkWeb Intel Feed",
-      description: "Provides indicators from dark web forums and marketplaces focusing on stolen credentials and zero-day exploits.",
-      frequency: "Daily updates",
-      format: "STIX 2.1"
-    },
-    feedB: {
-      name: "Industry ISAC Feed",
-      description: "Sector-specific intelligence sharing from peers in your industry with focus on current campaigns targeting your sector.",
-      frequency: "Weekly digests with real-time critical alerts",
-      format: "TAXII 2.1"
-    },
-    feedC: {
-      name: "Vendor Threat Reports",
-      description: "Commercial security vendor reports focusing on nation-state actors with comprehensive analysis but sometimes delayed disclosures.",
-      frequency: "Monthly detailed reports",
-      format: "PDF Reports + CSV indicator lists"
+  // State for API response handling
+  const [threatActorApiResponse, setThreatActorApiResponse] = useState(null);
+  const [isLoadingThreatActors, setIsLoadingThreatActors] = useState(false);
+  const [threatActorError, setThreatActorError] = useState(null);
+  
+  // State for IOCs API response handling
+  const [iocApiResponse, setIocApiResponse] = useState(null);
+  const [isLoadingIocs, setIsLoadingIocs] = useState(false);
+  const [iocError, setIocError] = useState(null);
+  
+  // State for TTPs API response handling
+  const [ttpApiResponse, setTtpApiResponse] = useState(null);
+  const [isLoadingTtps, setIsLoadingTtps] = useState(false);
+  const [ttpError, setTtpError] = useState(null);
+  
+
+  // Helper function to create a delay
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Function to fetch extracted TTPs data from API
+  const fetchExtractedTtps = async () => {
+    setIsLoadingTtps(true);
+    setTtpError(null);
+    
+    try {
+      const response = await fetch('https://cwsotaf35h.execute-api.us-east-2.amazonaws.com/v1/worksheet1/extract-ttps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ttpAnalysis
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('TTP API response:', data);
+      
+      // Parse the stringified JSON in the body property if it exists
+      if (data && data.body && typeof data.body === 'string') {
+        try {
+          const parsedBody = JSON.parse(data.body);
+          setTtpApiResponse(parsedBody);
+        } catch (parseError) {
+          console.error('Error parsing body:', parseError);
+          setTtpApiResponse(data);
+        }
+      } else {
+        // Add a delay of 10-20 seconds before setting the response
+        const delayTime = Math.floor(Math.random() * 10000) + 10000; // Random delay between 10-20 seconds
+        await delay(delayTime);
+        setTtpApiResponse(data);
+      }
+    } catch (error) {
+      console.error('Error in fetchExtractedTtps:', error);
+      setTtpError(
+        'There was an error connecting to the API. Please try again later or contact support if the issue persists.'
+      );
+    } finally {
+      setIsLoadingTtps(false);
     }
   };
-
+  
+  // Function to fetch extracted IOCs data from API
+  const fetchExtractedIocs = async () => {
+    setIsLoadingIocs(true);
+    setIocError(null);
+    
+    try {
+      const response = await fetch('https://cwsotaf35h.execute-api.us-east-2.amazonaws.com/v1/worksheet1/extracted-iocs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          iocAnalysis
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('IOC API response:', data);
+      
+      // Parse the stringified JSON in the body property if it exists
+      if (data && data.body && typeof data.body === 'string') {
+        try {
+          const parsedBody = JSON.parse(data.body);
+          setIocApiResponse(parsedBody);
+        } catch (parseError) {
+          console.error('Error parsing body:', parseError);
+          setIocApiResponse(data);
+        }
+      } else {
+        // Add a delay of 10-20 seconds before setting the response
+        const delayTime = Math.floor(Math.random() * 10000) + 10000; // Random delay between 10-20 seconds
+        await delay(delayTime);
+        setIocApiResponse(data);
+      }
+    } catch (error) {
+      console.error('Error in fetchExtractedIocs:', error);
+      setIocError(
+        'There was an error connecting to the API. Please try again later or contact support if the issue persists.'
+      );
+    } finally {
+      setIsLoadingIocs(false);
+    }
+  };
+  
+  // Function to fetch threat actor data from API
+  const fetchThreatActorData = async () => {
+    setIsLoadingThreatActors(true);
+    setThreatActorError(null);
+    
+    try {
+      const response = await fetch('https://cwsotaf35h.execute-api.us-east-2.amazonaws.com/v1/worksheet1/identify-threat-actors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          threatActorAnalysis
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Threat Actor API response:', data);
+      
+      // Parse the stringified JSON in the body property if it exists
+      if (data && data.body && typeof data.body === 'string') {
+        try {
+          const parsedBody = JSON.parse(data.body);
+          setThreatActorApiResponse({ body: parsedBody });
+        } catch (parseError) {
+          console.error('Error parsing body:', parseError);
+          setThreatActorApiResponse(data);
+        }
+      } else {
+        // Add a delay of 10-20 seconds before setting the response
+        const delayTime = Math.floor(Math.random() * 10000) + 10000; // Random delay between 10-20 seconds
+        await delay(delayTime);
+        setThreatActorApiResponse(data);
+      }
+    } catch (error) {
+      console.error('Error in fetchThreatActorData:', error);
+      setThreatActorError(
+        'There was an error connecting to the API. Please try again later or contact support if the issue persists.'
+      );
+    } finally {
+      setIsLoadingThreatActors(false);
+    }
+  };
+  
   // Calculate progress
   useEffect(() => {
-    let progress = 0;
+    // Calculate completion percentage based on filled fields
+    let completedTasks = 0;
+    if (ttpAnalysis.trim()) completedTasks++;
+    if (iocAnalysis.trim()) completedTasks++;
+    if (threatActorAnalysis.trim()) completedTasks++;
     
-    // Check feed scoring completion
-    const scoresDone = Object.values(feedScores).every(feed => 
-      Object.values(feed).every(score => score > 0)
-    );
+    const percentComplete = Math.round((completedTasks / 3) * 100);
     
-    if (scoresDone) progress += 33;
-    
-    // Check matrix completion
-    const matrixDone = Object.values(priorityMatrix).some(quadrant => quadrant.length > 0);
-    if (matrixDone) progress += 33;
-    
-    // Check justification completion
-    if (topFeedJustification.length > 10) progress += 34;
-    
-    // Save feed scoring data to threatLandscape for new context structure
-    // This bridges old worksheet with new context structure
-    if (progress > 0) {
-      setThreatLandscape({
-        ...threatLandscape,
-        aiSummary: 'AI analysis suggests monitoring emerging threats in the financial sector.',
-        userAssessment: topFeedJustification,
-        priorityThreats: getHighestScoringFeed() ? [getHighestScoringFeed()] : []
-      });
-    }
-    
-    setWorksheetProgress({
-      ...worksheetProgress,
-      worksheet1: progress
-    });
-  }, [feedScores, priorityMatrix, topFeedJustification, threatLandscape, setThreatLandscape, worksheetProgress, setWorksheetProgress]);
-
-  // Handle score changes
-  const handleScoreChange = (feed, criterion, value) => {
-    setFeedScores({
-      ...feedScores,
-      [feed]: {
-        ...feedScores[feed],
-        [criterion]: parseInt(value)
-      }
-    });
-  };
-
-  // Handle drag start
-  const handleDragStart = (feed) => {
-    setDraggingFeed(feed);
-  };
-
-  // Handle drop in quadrant
-  const handleDrop = (quadrant) => {
-    if (!draggingFeed) return;
-    
-    // Remove feed from any existing quadrant
-    const updatedMatrix = {
-      highRelevanceHighReliability: priorityMatrix.highRelevanceHighReliability.filter(f => f !== draggingFeed),
-      highRelevanceLowReliability: priorityMatrix.highRelevanceLowReliability.filter(f => f !== draggingFeed),
-      lowRelevanceHighReliability: priorityMatrix.lowRelevanceHighReliability.filter(f => f !== draggingFeed),
-      lowRelevanceLowReliability: priorityMatrix.lowRelevanceLowReliability.filter(f => f !== draggingFeed)
-    };
-    
-    // Add to new quadrant
-    updatedMatrix[quadrant] = [...updatedMatrix[quadrant], draggingFeed];
-    
-    setPriorityMatrix(updatedMatrix);
-    setDraggingFeed(null);
-  };
-
-  // Handle justification change
-  const handleJustificationChange = (e) => {
-    setTopFeedJustification(e.target.value);
-  };
-
-  // Handle next step
-  const handleNextStep = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Save final data to new context structure before navigating
-      setThreatLandscape({
-        ...threatLandscape,
-        aiSummary: 'AI analysis suggests monitoring emerging threats in the financial sector.',
-        userAssessment: topFeedJustification,
-        priorityThreats: getHighestScoringFeed() ? [getHighestScoringFeed()] : [],
-        emergingThreats: ['APT-X', 'Ransomware-Y', 'Malware-Z']
-      });
-      navigate('/worksheet-2');
-    }
-  };
-
-  // Handle previous step
-  const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      navigate('/');
-    }
-  };
-
-  // Calculate total scores for each feed
-  const calculateTotalScore = (feed) => {
-    const scores = feedScores[feed];
-    return Object.values(scores).reduce((total, score) => total + score, 0);
-  };
-
-  // Get highest scoring feed
-  const getHighestScoringFeed = () => {
-    const totals = {
-      feedA: calculateTotalScore('feedA'),
-      feedB: calculateTotalScore('feedB'),
-      feedC: calculateTotalScore('feedC')
-    };
-    
-    return Object.entries(totals).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-  };
+    // Update progress in context
+    setWorksheetProgress(prevProgress => ({
+      ...prevProgress,
+      worksheet1: percentComplete
+    }));
+  }, [ttpAnalysis, iocAnalysis, threatActorAnalysis, setWorksheetProgress]);
 
   return (
-    <Container>
-      <Row className="justify-content-md-center mt-4 mb-5">
-        <Col md={10}>
-          <Card className="shadow">
-            <Card.Header as="h4" className="bg-primary text-white">
-              Worksheet 1: Intelligence Feed Prioritization
-            </Card.Header>
-            <Card.Body>
-              {currentStep === 1 && (
-                <>
-                  <h5>Part 1: Feed Assessment</h5>
-                  <p>Score each intelligence feed on a scale of 1-5 for the following attributes:</p>
-                  
-                  <Table bordered hover responsive>
-                    <thead>
-                      <tr>
-                        <th>Feed</th>
-                        <th>Description</th>
-                        <th>Reliability (1-5)</th>
-                        <th>Relevance (1-5)</th>
-                        <th>Actionability (1-5)</th>
-                        <th>Timeliness (1-5)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(feedData).map(([feedKey, feed]) => (
-                        <tr key={feedKey}>
-                          <td><strong>{feed.name}</strong><br/><small>{feed.frequency}</small></td>
-                          <td>{feed.description}</td>
-                          <td>
-                            <Form.Select 
-                              value={feedScores[feedKey].reliability} 
-                              onChange={(e) => handleScoreChange(feedKey, 'reliability', e.target.value)}
-                              required
-                            >
-                              <option value="0">Select</option>
-                              {[1, 2, 3, 4, 5].map(num => (
-                                <option key={num} value={num}>{num}</option>
-                              ))}
-                            </Form.Select>
-                          </td>
-                          <td>
-                            <Form.Select 
-                              value={feedScores[feedKey].relevance} 
-                              onChange={(e) => handleScoreChange(feedKey, 'relevance', e.target.value)}
-                              required
-                            >
-                              <option value="0">Select</option>
-                              {[1, 2, 3, 4, 5].map(num => (
-                                <option key={num} value={num}>{num}</option>
-                              ))}
-                            </Form.Select>
-                          </td>
-                          <td>
-                            <Form.Select 
-                              value={feedScores[feedKey].actionability} 
-                              onChange={(e) => handleScoreChange(feedKey, 'actionability', e.target.value)}
-                              required
-                            >
-                              <option value="0">Select</option>
-                              {[1, 2, 3, 4, 5].map(num => (
-                                <option key={num} value={num}>{num}</option>
-                              ))}
-                            </Form.Select>
-                          </td>
-                          <td>
-                            <Form.Select 
-                              value={feedScores[feedKey].timeliness} 
-                              onChange={(e) => handleScoreChange(feedKey, 'timeliness', e.target.value)}
-                              required
-                            >
-                              <option value="0">Select</option>
-                              {[1, 2, 3, 4, 5].map(num => (
-                                <option key={num} value={num}>{num}</option>
-                              ))}
-                            </Form.Select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </>
+    <Container className="mt-4 mb-5">
+      <h1 className="mb-4">Worksheet 1: Analysis</h1>
+      
+      <Card className="mb-4">
+        <Card.Header as="h5">Overview</Card.Header>
+        <Card.Body>
+          <p>
+            In this worksheet, you will analyze threat intelligence to identify Tactics, Techniques, and Procedures (TTPs),
+            Indicators of Compromise (IOCs), and Threat Actors. This analysis forms the foundation for developing effective
+            detection rules and response strategies in later worksheets.
+          </p>
+        </Card.Body>
+      </Card>
+
+      <Card className="mb-4">
+        <Card.Header as="h5">Task 1: Document TTPs</Card.Header>
+        <Card.Body>
+          <p>
+            Analyze the threat intelligence reports and identify the Tactics, Techniques, and Procedures (TTPs) used by the threat actors.
+            Use the MITRE ATT&CK framework to categorize the TTPs where possible.
+          </p>
+          <Form.Group className="mb-3">
+            <Form.Label>Document the TTPs identified in the threat intelligence:</Form.Label>
+            <Form.Control 
+              as="textarea" 
+              rows={5} 
+              placeholder="Enter TTPs here..."
+              value={ttpAnalysis}
+              onChange={(e) => setTtpAnalysis(e.target.value)}
+            />
+            <div className="d-flex mt-2">
+              <button className="btn btn-primary me-2">Submit</button>
+              {ttpApiResponse ? (
+                <button 
+                  className="btn btn-warning"
+                  onClick={() => {
+                    setTtpApiResponse(null);
+                  }}
+                >
+                  Clear AI Response
+                </button>
+              ) : (
+                <button 
+                  className="btn btn-secondary"
+                  onClick={fetchExtractedTtps}
+                  disabled={isLoadingTtps}
+                >
+                  {isLoadingTtps ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Loading...
+                    </>
+                  ) : 'Use AI'}
+                </button>
               )}
-              
-              {currentStep === 2 && (
-                <div>
-                  <h5>Part 2: Prioritization Matrix</h5>
-                  <p>Drag and drop each feed into the appropriate quadrant of the matrix based on its reliability and relevance.</p>
-                  
-                  <div className="mb-4">
-                    <div className="d-flex justify-content-center mb-3">
-                      <div className="me-4 p-2 border" style={{ cursor: 'move' }}>
-                        {Object.entries(feedData).map(([feedKey, feed]) => (
-                          <div 
-                            key={feedKey}
-                            className="p-2 my-1 bg-light"
-                            draggable
-                            onDragStart={() => handleDragStart(feedKey)}
-                          >
-                            {feed.name}
+            </div>
+            
+            {/* Display TTP API response or error */}
+            {ttpApiResponse && (
+              <div className="mt-3">
+                <div className="p-3" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px', color: '#0d47a1' }}>
+                  <h5>MITRE ATT&CK TTPs</h5>
+                  {ttpApiResponse && (ttpApiResponse.MITRE_TTPs || (ttpApiResponse.body && ttpApiResponse.body.MITRE_TTPs)) ? (
+                    <>
+                      <p>The AI has identified the following TTPs:</p>
+                      {Object.entries(ttpApiResponse.MITRE_TTPs || (ttpApiResponse.body && ttpApiResponse.body.MITRE_TTPs) || {}).map(([category, techniques]) => (
+                        <div key={category} className="mb-3">
+                          <h6 className="fw-bold" style={{ color: '#0d47a1' }}>{category}</h6>
+                          <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                            {techniques.map((technique, index) => (
+                              <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{technique}</div>
+                            ))}
                           </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <p>No specific TTPs were identified. Please provide more detailed information.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {ttpError && (
+              <div className="mt-3">
+                <div className="p-3" style={{ backgroundColor: '#ffebee', borderRadius: '4px' }}>
+                  <h5 className="text-danger">Error</h5>
+                  <p>{ttpError}</p>
+                </div>
+              </div>
+            )}
+          </Form.Group>
+        </Card.Body>
+      </Card>
+
+      <Card className="mb-4">
+        <Card.Header as="h5">Task 2: Identify IOCs</Card.Header>
+        <Card.Body>
+          <p>
+            Extract all IOCs related to registry modifications made by the malware.
+          </p>
+          <Form.Group className="mb-3">
+            <Form.Label>Document the IOCs identified in the threat intelligence:</Form.Label>
+            <Form.Control 
+              as="textarea" 
+              rows={5} 
+              placeholder="Enter IOCs here..."
+              value={iocAnalysis}
+              onChange={(e) => setIocAnalysis(e.target.value)}
+            />
+            <div className="d-flex mt-2">
+              <button className="btn btn-primary me-2">Submit</button>
+              {iocApiResponse ? (
+                <button 
+                  className="btn btn-warning"
+                  onClick={() => {
+                    setIocApiResponse(null);
+                  }}
+                >
+                  Clear AI Response
+                </button>
+              ) : (
+                <button 
+                  className="btn btn-secondary"
+                  onClick={fetchExtractedIocs}
+                  disabled={isLoadingIocs}
+                >
+                  {isLoadingIocs ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Loading...
+                    </>
+                  ) : 'Use AI'}
+                </button>
+              )}
+            </div>
+            
+            {/* Display IOC API response or error */}
+            {iocApiResponse && (
+              <div className="mt-3">
+                <div className="p-3" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px', color: '#0d47a1' }}>
+                  <h5>Registry Modifications</h5>
+                  
+                  <h6 className="mt-3" style={{ color: '#0d47a1' }}>Registry Keys Created:</h6>
+                  <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                    {iocApiResponse.registry_modifications.keys_created.map((key, index) => (
+                      <div key={`key-${index}`} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><code>{key}</code></div>
+                    ))}
+                  </div>
+                  
+                  <h6 className="mt-3" style={{ color: '#0d47a1' }}>Registry Values Created:</h6>
+                  <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                    {iocApiResponse.registry_modifications.key_values_modified.map((value, index) => (
+                      <div key={`mod-${index}`} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>
+                        <div><strong>Key Path:</strong> <code>{value.key_path}</code></div>
+                        <div><strong>Name:</strong> {value.name}</div>
+                        <div><strong>Type:</strong> {value.type}</div>
+                        <div>
+                          <strong>Data:</strong> {value.type === 'binary' ? (
+                            <div>
+                              <div><strong>Old:</strong> <small className="text-muted">[Binary data]</small></div>
+                              <div><strong>New:</strong> <small className="text-muted">[Binary data]</small></div>
+                            </div>
+                          ) : (
+                            <>
+                              <div><strong>Old:</strong> <code>{value.old_data}</code></div>
+                              <div><strong>New:</strong> <code>{value.new_data}</code></div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {iocError && (
+              <div className="mt-3">
+                <div className="p-3" style={{ backgroundColor: '#ffebee', borderRadius: '4px' }}>
+                  <h5 className="text-danger">Error</h5>
+                  <p>{iocError}</p>
+                </div>
+              </div>
+            )}
+          </Form.Group>
+        </Card.Body>
+      </Card>
+
+      <Card className="mb-4">
+        <Card.Header as="h5">Task 3: Identify Threat Actors</Card.Header>
+        <Card.Body>
+          <p>
+          Find details about the threat actors associated with the development of the malware.
+          </p>
+          <Form.Group className="mb-3">
+            <Form.Label>Based on the TTPs and IOCs identified, document information about the threat actors involved.
+            Include details about their motivations, capabilities, and any known attribution:</Form.Label>
+            <Form.Control 
+              as="textarea" 
+              rows={5} 
+              placeholder="Enter Threat Actor information here..."
+              value={threatActorAnalysis}
+              onChange={(e) => setThreatActorAnalysis(e.target.value)}
+            />
+            <div className="d-flex mt-2">
+              <button className="btn btn-primary me-2">Submit</button>
+              {threatActorApiResponse ? (
+                <button 
+                  className="btn btn-warning"
+                  onClick={() => {
+                    setThreatActorApiResponse(null);
+                  }}
+                >
+                  Clear AI Response
+                </button>
+              ) : (
+                <button 
+                  className="btn btn-secondary"
+                  onClick={fetchThreatActorData}
+                  disabled={isLoadingThreatActors}
+                >
+                  {isLoadingThreatActors ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Loading...
+                    </>
+                  ) : 'Use AI'}
+                </button>
+              )}
+            </div>
+            
+            {/* Display API response or error */}
+            {threatActorApiResponse && (
+              <div className="mt-3">
+                <div className="p-3" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px', color: '#0d47a1' }}>
+                  <h5>AI Analysis</h5>
+                  <p>The AI has identified the following threat actor:</p>
+                  
+                  {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor) && (
+                    <div className="mt-2">
+                      <h6 style={{ color: '#0d47a1' }}>Threat Actor Profile:</h6>
+                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>Alias:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).alias}</div>
+                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>Developer of:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).developer_of}</div>
+                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>First observed:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).first_observed_advertising}</div>
+                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>Motive:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).motive}</div>
+                      </div>
+                      
+                      <h6 style={{ color: '#0d47a1' }}>Communication Channels:</h6>
+                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                        {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).current_communication_channels.map((channel, index) => (
+                          <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{channel}</div>
                         ))}
                       </div>
                       
-                      <div style={{ width: '500px', height: '300px' }}>
-                        <div className="d-flex h-100">
-                          <div className="d-flex flex-column w-50">
-                            <div 
-                              className="border border-success h-50 p-2"
-                              style={{ backgroundColor: '#e8f5e9' }}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={() => handleDrop('highRelevanceHighReliability')}
-                            >
-                              <div className="text-center mb-2"><strong>High Relevance<br/>High Reliability</strong></div>
-                              {priorityMatrix.highRelevanceHighReliability.map(feedKey => (
-                                <div key={feedKey} className="p-1 my-1 bg-white border">
-                                  {feedData[feedKey].name}
-                                </div>
-                              ))}
-                            </div>
-                            <div 
-                              className="border h-50 p-2"
-                              style={{ backgroundColor: '#fff3e0' }}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={() => handleDrop('lowRelevanceHighReliability')}
-                            >
-                              <div className="text-center mb-2"><strong>Low Relevance<br/>High Reliability</strong></div>
-                              {priorityMatrix.lowRelevanceHighReliability.map(feedKey => (
-                                <div key={feedKey} className="p-1 my-1 bg-white border">
-                                  {feedData[feedKey].name}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="d-flex flex-column w-50">
-                            <div 
-                              className="border h-50 p-2"
-                              style={{ backgroundColor: '#e3f2fd' }}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={() => handleDrop('highRelevanceLowReliability')}
-                            >
-                              <div className="text-center mb-2"><strong>High Relevance<br/>Low Reliability</strong></div>
-                              {priorityMatrix.highRelevanceLowReliability.map(feedKey => (
-                                <div key={feedKey} className="p-1 my-1 bg-white border">
-                                  {feedData[feedKey].name}
-                                </div>
-                              ))}
-                            </div>
-                            <div 
-                              className="border h-50 p-2"
-                              style={{ backgroundColor: '#ffebee' }}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={() => handleDrop('lowRelevanceLowReliability')}
-                            >
-                              <div className="text-center mb-2"><strong>Low Relevance<br/>Low Reliability</strong></div>
-                              {priorityMatrix.lowRelevanceLowReliability.map(feedKey => (
-                                <div key={feedKey} className="p-1 my-1 bg-white border">
-                                  {feedData[feedKey].name}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
+                      <h6 style={{ color: '#0d47a1' }}>Aliases Used on Forums:</h6>
+                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                        {Object.entries((threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).aliases_used_on_forums).map(([forum, alias], index) => (
+                          <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>{forum}:</strong> {alias}</div>
+                        ))}
+                      </div>
+                      
+                      <h6 style={{ color: '#0d47a1' }}>Malware Characteristics:</h6>
+                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                        {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).malware_characteristics_developed.map((characteristic, index) => (
+                          <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{characteristic}</div>
+                        ))}
+                      </div>
+                      
+                      <h6 style={{ color: '#0d47a1' }}>Geographical Targeting:</h6>
+                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).geographical_targeting_preference}</div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
-              
-              {currentStep === 3 && (
-                <div>
-                  <h5>Part 3: Justification</h5>
-                  <p>
-                    Based on your assessment, the highest scoring feed is:&nbsp;
-                    <strong>{feedData[getHighestScoringFeed()].name}</strong>
-                  </p>
-                  <p>Provide justification for why this feed should be prioritized:</p>
-                  
-                  <Form.Group className="mb-3">
-                    <Form.Control
-                      as="textarea"
-                      rows={4}
-                      value={topFeedJustification}
-                      onChange={handleJustificationChange}
-                      placeholder="Explain why this feed deserves priority..."
-                    />
-                  </Form.Group>
+              </div>
+            )}
+            
+            {threatActorError && (
+              <div className="mt-3">
+                <div className="p-3" style={{ backgroundColor: '#ffebee', borderRadius: '4px' }}>
+                  <h5 className="text-danger">Error</h5>
+                  <p>{threatActorError}</p>
                 </div>
-              )}
-              
-              <div className="d-flex justify-content-between mt-4">
-                {currentStep === 1 ? (
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => window.location.href = '/'}
-                  >
-                    Back to Home
-                  </Button>
-                ) : (
-                  <Button variant="secondary" onClick={handlePrevStep}>Previous Step</Button>
-                )}
-                
-                {currentStep === 3 ? (
-                  <Button 
-                    variant="primary" 
-                    onClick={() => window.location.href = '/worksheet-2'}
-                    disabled={!topFeedJustification}
-                  >
-                    Next Exercise
-                  </Button>
-                ) : (
-                  <Button variant="primary" onClick={handleNextStep}>Next Step</Button>
-                )}
               </div>
-            </Card.Body>
-            <Card.Footer>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>Step {currentStep} of 3</div>
-                <div>Worksheet Progress: {worksheetProgress.worksheet1}%</div>
-              </div>
-            </Card.Footer>
-          </Card>
-        </Col>
-      </Row>
+            )}
+          </Form.Group>
+        </Card.Body>
+      </Card>
+      
+      <div className="d-flex justify-content-between">
+        <Link to="/" className="btn btn-secondary">Back to Home</Link>
+        <Link to="/worksheet-2" className="btn btn-primary">Next: Detection Rules</Link>
+      </div>
     </Container>
   );
 };

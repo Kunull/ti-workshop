@@ -1,43 +1,79 @@
-import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
 // Pages
 import Home from './pages/Home';
-import Worksheet1 from './pages/Worksheet1'; // Morning Briefing & Threat Landscape
-import Worksheet2 from './pages/Worksheet2'; // Prioritization & Tasking
-import Worksheet3 from './pages/Worksheet3'; // Deep Dive Investigation
-import Worksheet4 from './pages/Worksheet4'; // Threat Actor Understanding
-import Worksheet5 from './pages/Worksheet5'; // Proactive Threat Hunting
-import Worksheet6 from './pages/Worksheet6'; // Reporting & Knowledge Sharing
-import Results from './pages/Results';
+import Login from './pages/Login';
+import Worksheet1 from './pages/Worksheet1'; // Analysis - Extract TTPs, IOCs, TAs
+import Worksheet2 from './pages/Worksheet2'; // Detection Rules
+import Worksheet3 from './pages/Worksheet3'; // Automated Response
+import Worksheet4 from './pages/Worksheet4'; // Executive Summary
+import About from './pages/About';
 
 // Components
 import Navigation from './components/Navigation';
+import ProtectedRoute from './components/ProtectedRoute';
 import { WorkshopProvider } from './context/WorkshopContext';
+import { AuthProvider } from './context/AuthContext';
+
+// Wrapper component to force remounting when route changes
+const RouteWrapper = ({ Component }) => {
+  const location = useLocation();
+  // Using the pathname as a key forces the component to remount when the route changes
+  return <Component key={location.pathname} />;
+};
 
 function App() {
   return (
-    <WorkshopProvider>
-      <Router>
-        <div className="App">
-          <Navigation />
-          <div className="container mt-4">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/worksheet-1" element={<Worksheet1 />} />
-              <Route path="/worksheet-2" element={<Worksheet2 />} />
-              <Route path="/worksheet-3" element={<Worksheet3 />} />
-              <Route path="/worksheet-4" element={<Worksheet4 />} />
-              <Route path="/worksheet-5" element={<Worksheet5 />} />
-              <Route path="/worksheet-6" element={<Worksheet6 />} />
-              <Route path="/results" element={<Results />} />
-            </Routes>
+    <AuthProvider>
+      <WorkshopProvider>
+        <BrowserRouter>
+          <div className="App">
+            <Navigation />
+            <div className="container mt-4">
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                
+                {/* Protected routes */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <RouteWrapper Component={Home} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/worksheet-1" element={
+                  <ProtectedRoute>
+                    <RouteWrapper Component={Worksheet1} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/worksheet-2" element={
+                  <ProtectedRoute>
+                    <RouteWrapper Component={Worksheet2} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/worksheet-3" element={
+                  <ProtectedRoute>
+                    <RouteWrapper Component={Worksheet3} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/worksheet-4" element={
+                  <ProtectedRoute>
+                    <RouteWrapper Component={Worksheet4} />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/about" element={<RouteWrapper Component={About} />} />
+                
+                {/* Catch all undefined routes and redirect to home */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </Router>
-    </WorkshopProvider>
+        </BrowserRouter>
+      </WorkshopProvider>
+    </AuthProvider>
   );
 }
 

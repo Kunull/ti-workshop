@@ -1,36 +1,60 @@
-/* Cyware-inspired color palette - Enhanced */
+/* Color Palette */
 :root {
-  --cyware-primary: #0a2240;       /* Deep navy blue - primary color */
-  --cyware-secondary: #00a9b7;     /* Teal - secondary color */
-  --cyware-accent: #ff6b35;        /* Orange - accent color for emphasis */
-  --cyware-accent-soft: #ff8b60;   /* Softer orange for hover states */
-  --cyware-dark: #0f172a;          /* Darker blue for backgrounds */
-  --cyware-dark-alt: #1e293b;      /* Alternative dark blue */
-  --cyware-light: #f0f9ff;         /* Light blue-white for contrast */
-  --cyware-light-alt: #e0f2fe;     /* Slightly darker light blue */
-  --cyware-gray: #64748b;          /* Neutral gray */
-  --cyware-gray-light: #94a3b8;    /* Lighter gray for subtle elements */
-  --cyware-success: #10b981;       /* Green for success */
-  --cyware-success-light: #d1fae5; /* Light green background */
-  --cyware-warning: #f59e0b;       /* Amber for warnings */
-  --cyware-warning-light: #fef3c7; /* Light amber background */
-  --cyware-danger: #ef4444;        /* Red for danger/errors */
-  --cyware-danger-light: #fee2e2;  /* Light red background */
-  --cyware-gradient: linear-gradient(135deg, #0a2240 0%, #00a9b7 100%); /* Brand gradient */
-  --cyware-gradient-alt: linear-gradient(135deg, #0f172a 0%, #0891b2 100%); /* Alternative gradient */
+  /* Primary Colors */
+  --primary-color: #2c3e50;       /* Dark Blue */
+  --primary-hover: #1a2530;       /* Darker Blue for hover */
+  --primary-light: #34495e;       /* Lighter variation */
+  
+  /* Cyware Accent Colors - Used sparingly */
+  --cyware-blue: #4a7afc;         /* Softened Cyware Blue - for accents only */
+  --cyware-purple: #b14dd4;       /* Softened Cyware Purple - for accents only */
+  --cyware-green: #40c89a;        /* Softened Cyware Green - for accents only */
+  
+  /* Lighter variations for backgrounds */
+  --cyware-blue-light: #f0f4ff;   /* Very light blue background */
+  --cyware-purple-light: #f9f0ff; /* Very light purple background */
+  --cyware-green-light: #f0fcf8;  /* Very light green background */
+  
+  /* Neutral colors */
+  --text-dark: #2c3e50;           /* Dark text color */
+  --text-light: #ffffff;          /* Light text color */
+  --gray: #7a8599;                /* Neutral gray */
+  --gray-light: #f8f9fa;          /* Light gray background */
+  --border-color: #dee2e6;        /* Border color */
+  
+  /* Status Colors */
+  --success: var(--cyware-green); /* Success color */
+  --info: var(--cyware-blue);     /* Info color */
+  --warning: #f39c12;             /* Warning color */
+  --danger: #e74c3c;              /* Danger color */
   --cyware-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --cyware-input-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 body {
-  background-color: #f8fafc;
-  color: var(--cyware-dark);
-  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-image: 
-    radial-gradient(circle at 25% 10%, rgba(0, 169, 183, 0.05) 0%, transparent 500px),
-    radial-gradient(circle at 75% 90%, rgba(255, 107, 53, 0.05) 0%, transparent 500px);
+  background-color: #f5f7fa;
+  color: var(--text-dark);
+  font-family: 'Roboto', 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   background-attachment: fixed;
   line-height: 1.5;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Dashboard Grid Layout */
+.row {
+  margin-left: -1rem;
+  margin-right: -1rem;
+}
+
+.row > [class^="col-"] {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .App {
@@ -143,7 +167,7 @@ body {
 }
 
 .card-body {
-  padding: 1.8rem;
+  padding: 1.5rem;
   position: relative;
 }
 
@@ -208,15 +232,15 @@ body {
 }
 
 .btn-primary {
-  background: var(--cyware-gradient) !important;
+  background-color: var(--cyware-blue) !important;
   border: none !important;
   color: white;
 }
 
 .btn-primary:hover {
-  background: var(--cyware-gradient-alt) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 7px 14px rgba(10, 34, 64, 0.2), 0 3px 6px rgba(0, 0, 0, 0.1);
+  background-color: var(--cyware-blue-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary:active {
@@ -547,6 +571,314 @@ body {
 
 .bg-dark {
   background-color: var(--cyware-dark) !important;
+}
+
+/* Form Controls - Modern Dashboard Style */
+
+/* Custom Checkbox */
+.form-check-input {
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.form-check-input:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25) !important;
+}
+
+/* Custom Radio Button */
+.form-check-input[type="radio"]:checked {
+  background-color: var(--cyware-blue) !important;
+  border-color: var(--cyware-blue) !important;
+}
+
+/* Range Sliders */
+.form-range::-webkit-slider-thumb {
+  background-color: var(--cyware-blue) !important;
+}
+
+.form-range::-moz-range-thumb {
+  background-color: var(--cyware-blue) !important;
+}
+
+.form-range::-ms-thumb {
+  background-color: var(--cyware-blue) !important;
+}
+
+.form-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 1px #fff, 0 0 0 0.25rem rgba(74, 122, 252, 0.25) !important;
+}
+
+.form-range:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 1px #fff, 0 0 0 0.25rem rgba(74, 122, 252, 0.25) !important;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  background-color: #dee2e6;
+}
+
+.form-range::-moz-range-track {
+  background-color: #dee2e6;
+}
+
+/* Select Boxes */
+.form-select:focus {
+  border-color: var(--cyware-blue) !important;
+  box-shadow: 0 0 0 0.25rem rgba(74, 122, 252, 0.25) !important;
+}
+
+/* Input Focus States */
+.form-control {
+  border-radius: 6px !important;
+  border: 1px solid #dee2e6 !important;
+  padding: 0.5rem 0.75rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.15) !important;
+}
+
+/* Navigation Bar Styling */
+/* Dropdown Menu Styling */
+.navbar-nav .dropdown-menu {
+  background-color: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  opacity: 1 !important;
+  z-index: 9999999 !important;
+  position: absolute !important;
+  transform: none !important;
+  margin-top: 0 !important;
+  display: block !important;
+}
+
+/* Fix for dropdown being covered by page content */
+.navbar .dropdown {
+  position: static !important;
+}
+
+/* Ensure page content doesn't overlap dropdowns */
+.container, .row, .col, .card, h1, h2, h3, h4, h5, h6 {
+  z-index: 1 !important;
+  position: relative !important;
+}
+
+/* Fix for main page title covering dropdown */
+.container h1, .container h2, .container h3 {
+  z-index: 0 !important;
+  position: static !important;
+}
+
+/* Additional fixes for navbar and dropdown */
+.navbar {
+  position: relative !important;
+  z-index: 9999999 !important;
+}
+
+.navbar-nav {
+  z-index: 9999999 !important;
+}
+
+/* Fix for dropdown item clicks */
+.dropdown-item {
+  cursor: pointer !important;
+}
+
+/* Ensure dropdown toggle works properly */
+.dropdown-toggle::after {
+  display: inline-block !important;
+  margin-left: 0.255em !important;
+  vertical-align: 0.255em !important;
+  content: "" !important;
+  border-top: 0.3em solid !important;
+  border-right: 0.3em solid transparent !important;
+  border-bottom: 0 !important;
+  border-left: 0.3em solid transparent !important;
+}
+
+/* Ensure title doesn't interfere with dropdown */
+.display-4, .h3, .lead {
+  position: static !important;
+  z-index: auto !important;
+}
+
+/* Override Bootstrap's dropdown positioning */
+.dropdown-menu.show {
+  display: block !important;
+  top: 100% !important;
+  left: auto !important;
+  margin-top: 0.125rem !important;
+}
+
+.dropdown-item {
+  color: #333 !important;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: #f8f9fa !important;
+}
+
+.dropdown-item.active {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+.navbar, .navbar.navbar-expand-lg {
+  background-color: #2c3e50 !important;
+  color: white !important;
+}
+
+.navbar.bg-primary .nav-link, .navbar .nav-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.navbar .nav-link svg path {
+  stroke: white !important;
+}
+
+.navbar .nav-link:hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.navbar .nav-link.active {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.15);
+  font-weight: 500;
+}
+
+.navbar .navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Cyware-branded UI elements */
+
+/* Card Styling - Modern Dashboard Look */
+.card {
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Card Headers with Dark Blue */
+.card-header.bg-primary {
+  background-color: var(--primary-color) !important;
+  border: none !important;
+  padding: 1rem 1.5rem !important;
+  font-weight: 500 !important;
+}
+
+/* Buttons - Modern Style */
+.btn {
+  border-radius: 6px !important;
+  padding: 0.5rem 1.25rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Previous Exercise Button - More Visible */
+.btn-secondary {
+  background-color: var(--primary-light) !important;
+  border-color: var(--primary-light) !important;
+  color: white !important;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:hover, .btn-secondary:focus {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-success {
+  background-color: var(--cyware-green) !important;
+  border-color: var(--cyware-green) !important;
+}
+
+.btn-success:hover, .btn-success:focus {
+  background-color: var(--cyware-green-hover) !important;
+  border-color: var(--cyware-green-hover) !important;
+}
+
+.btn-info {
+  background-color: var(--cyware-purple) !important;
+  border-color: var(--cyware-purple) !important;
+  color: white !important;
+}
+
+.btn-info:hover, .btn-info:focus {
+  background-color: var(--cyware-purple-hover) !important;
+  border-color: var(--cyware-purple-hover) !important;
+}
+
+/* Badges */
+.badge-primary {
+  background-color: var(--cyware-blue) !important;
+}
+
+.badge-info {
+  background-color: var(--cyware-purple) !important;
+}
+
+.badge-success {
+  background-color: var(--cyware-green) !important;
+}
+
+/* Progress bars */
+.progress-bar {
+  background-color: var(--cyware-blue) !important;
+}
+
+/* Links */
+a {
+  color: var(--cyware-blue);
+}
+
+a:hover {
+  color: var(--cyware-blue-hover);
+}
+
+/* Background colors */
+.bg-light-blue {
+  background-color: var(--cyware-blue-light) !important;
+}
+
+.bg-light-purple {
+  background-color: var(--cyware-purple-light) !important;
+}
+
+.bg-light-green {
+  background-color: var(--cyware-green-light) !important;
 }
 
 /* Print styles */

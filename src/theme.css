@@ -1,0 +1,136 @@
+/* Cyware brand colors */
+:root {
+  --cyware-blue: #004efc;
+  --cyware-purple: #a600ce;
+  --cyware-green: #00c689;
+  
+  /* Subtle variations for UI elements */
+  --cyware-blue-light: #e6edff;
+  --cyware-purple-light: #f7e6ff;
+  --cyware-green-light: #e6fff6;
+  
+  --cyware-blue-hover: #003cc9;
+  --cyware-purple-hover: #8400a5;
+  --cyware-green-hover: #00a36e;
+  
+  /* UI component colors */
+  --primary-bg: var(--cyware-blue);
+  --primary-hover: var(--cyware-blue-hover);
+  --success-bg: var(--cyware-green);
+  --success-hover: var(--cyware-green-hover);
+  --accent-bg: var(--cyware-purple);
+  --accent-hover: var(--cyware-purple-hover);
+  
+  /* Subtle background colors */
+  --light-bg-blue: var(--cyware-blue-light);
+  --light-bg-purple: var(--cyware-purple-light);
+  --light-bg-green: var(--cyware-green-light);
+}
+
+/* Primary buttons and headers */
+.btn-primary, .bg-primary {
+  background-color: var(--cyware-blue) !important;
+  border-color: var(--cyware-blue) !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--cyware-blue-hover) !important;
+  border-color: var(--cyware-blue-hover) !important;
+}
+
+/* Success buttons and indicators */
+.btn-success, .bg-success {
+  background-color: var(--cyware-green) !important;
+  border-color: var(--cyware-green) !important;
+}
+
+.btn-success:hover, .btn-success:focus {
+  background-color: var(--cyware-green-hover) !important;
+  border-color: var(--cyware-green-hover) !important;
+}
+
+/* Accent elements */
+.btn-info, .bg-info {
+  background-color: var(--cyware-purple) !important;
+  border-color: var(--cyware-purple) !important;
+  color: white !important;
+}
+
+.btn-info:hover, .btn-info:focus {
+  background-color: var(--cyware-purple-hover) !important;
+  border-color: var(--cyware-purple-hover) !important;
+}
+
+/* Subtle background variations */
+.bg-light-blue {
+  background-color: var(--light-bg-blue) !important;
+}
+
+.bg-light-purple {
+  background-color: var(--light-bg-purple) !important;
+}
+
+.bg-light-green {
+  background-color: var(--light-bg-green) !important;
+}
+
+/* Text colors */
+.text-primary {
+  color: var(--cyware-blue) !important;
+}
+
+.text-success {
+  color: var(--cyware-green) !important;
+}
+
+.text-info {
+  color: var(--cyware-purple) !important;
+}
+
+/* Border accents */
+.border-primary {
+  border-color: var(--cyware-blue) !important;
+}
+
+.border-success {
+  border-color: var(--cyware-green) !important;
+}
+
+.border-info {
+  border-color: var(--cyware-purple) !important;
+}
+
+/* Progress bars */
+.progress-bar-primary {
+  background-color: var(--cyware-blue);
+}
+
+.progress-bar-success {
+  background-color: var(--cyware-green);
+}
+
+.progress-bar-info {
+  background-color: var(--cyware-purple);
+}
+
+/* Links */
+a {
+  color: var(--cyware-blue);
+}
+
+a:hover {
+  color: var(--cyware-blue-hover);
+}
+
+/* Badge colors */
+.badge-primary {
+  background-color: var(--cyware-blue);
+}
+
+.badge-success {
+  background-color: var(--cyware-green);
+}
+
+.badge-info {
+  background-color: var(--cyware-purple);
+}

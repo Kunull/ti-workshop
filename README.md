@@ -1,6 +1,42 @@
 # Getting Started with Create React App
+# Threat Intel Workshop App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Authentication System
+
+This application includes a user authentication system that uses AWS DynamoDB to store user credentials. Users can register for an account and log in to access the workshop content.
+
+### Setting Up DynamoDB
+
+1. Configure your AWS credentials in the `.env` file:
+   ```
+   REACT_APP_AWS_ACCESS_KEY_ID=your_access_key_id
+   REACT_APP_AWS_SECRET_ACCESS_KEY=your_secret_access_key
+   REACT_APP_AWS_REGION=us-east-1
+   ```
+
+2. Create the DynamoDB table by running:
+   ```
+   npm run setup-db
+   ```
+
+### AWS Lambda Deployment Notes
+
+When deploying to AWS Lambda, all file operations must use the `/tmp` directory as the file system is read-only elsewhere. Set the following environment variables:
+
+```
+HOME=/tmp
+DSPY_CACHE_DIR=/tmp/dspy_cache
+LITELLM_CACHE_DIR=/tmp/litellm_cache
+JOBLIB_TEMP_FOLDER=/tmp/joblib_cache
+TRANSFORMERS_CACHE=/tmp/transformers_cache
+HF_HOME=/tmp/hf_home
+XDG_CACHE_HOME=/tmp/xdg_cache
+PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright
+NLTK_DATA=/tmp/nltk_data
+CRAWL4AI_CACHE_DIR=/tmp/crawl4ai_cache
+```
 
 ## Available Scripts
 
