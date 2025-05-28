@@ -198,7 +198,8 @@ const Worksheet1 = () => {
   }, [ttpAnalysis, iocAnalysis, threatActorAnalysis, setWorksheetProgress]);
 
   return (
-    <Container className="mt-4 mb-5">
+    <Container className="my-4">
+      
       <h1 className="mb-4">Worksheet 1: Analysis</h1>
       
       <Card className="mb-4">

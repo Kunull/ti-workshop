@@ -66,7 +66,7 @@ const Navigation = () => {
       <Container>
         <Navbar.Brand onClick={goToHome} className="d-flex align-items-center" style={{ cursor: 'pointer' }}>
           <div>
-            <span className="fw-bold fs-4">Taking action in a noisy world</span>
+            <span className="fw-bold fs-4">Scenario 1: From Sandbox to Action – Malware Incident Analysis</span>
             <div className="brand-tagline" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)' }}>A day in the life of an Intel Analyst</div>
           </div>
         </Navbar.Brand>

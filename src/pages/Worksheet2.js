@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Form, Spinner, Alert } from 'react-bootstrap';
+import { Container, Card, Form, Button, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
 import axios from 'axios';
@@ -28,14 +28,11 @@ const Worksheet2 = () => {
   const [apiResponse, setApiResponse] = useState(null);
   
   // State for polling
-  const [isPolling, setIsPolling] = useState(false);
-  const [messageId, setMessageId] = useState(null);
   const [pollCount, setPollCount] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [processingSteps, setProcessingSteps] = useState([]);
   
   // State for raw response data display
-  const [pollResponses, setPollResponses] = useState([]);
   const [extractedData, setExtractedData] = useState(null);
   const [researchQuery, setResearchQuery] = useState('');
   const [researchReport, setResearchReport] = useState(null);
@@ -48,362 +45,141 @@ const Worksheet2 = () => {
   // Helper function to create a delay
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   
-  // Function to make a single poll request
-  const makePollRequest = async (msgId) => {
-    const pollEndpoint = 'https://r90guxvefb.execute-api.us-east-2.amazonaws.com/v1/poll';
-    
-    try {
-      // Log the request being made (similar to what's shown in the screenshot)
-      console.log(`Polling for results with messageId: ${msgId}, attempt ${pollCount + 1}`);
-      
-      const response = await axios.get(pollEndpoint, {
-        params: { messageId: msgId }
-      });
-      
-      // Log the response as seen in the TDL creator frontend
-      console.log('Poll response:', response.data);
-      
-      // Store the poll response for display
-      setPollResponses(prev => [...prev, response.data]);
-      
-      // Check for the "Still processing, continuing to poll..." scenario
-      if (response.data.status === 'PROCESSING' || 
-          (response.data.currentStep && 
-           response.data.currentStep !== 'research_started')) {
-        console.log('Still processing, continuing to poll...');
-      }
-      
-      // Extract data if available
-      if (response.data.extractedData) {
-        setExtractedData(response.data.extractedData);
-      }
-      
-      // Store research query if available
-      if (response.data.researchQuery) {
-        setResearchQuery(response.data.researchQuery);
-      }
-      
-      // Store research report if available
-      if (response.data.researchResults) {
-        setResearchReport(response.data.researchResults);
-      }
-      
-      // Store extracted research data if available
-      if (response.data.extractedResearchData) {
-        setExtractedResearchData(response.data.extractedResearchData);
-      }
-      
-      // Check for rules in the response - these are the actual rules we want to display
-      if (response.data.rules && response.data.rules.length > 0) {
-        console.log('Found rules in poll response:', response.data.rules);
-        
-        // Simply update the API response with the rules from this response
-        setApiResponse(prevResponse => {
-          // If we don't have a previous response, create a new one
-          if (!prevResponse) {
-            return {
-              status: 'PROCESSING',
-              rules: response.data.rules
-            };
-          }
-          
-          // Otherwise, replace the rules with the new ones
-          return {
-            ...prevResponse,
-            rules: response.data.rules
-          };
-        });
-      }
-      
-      // Check for rule decisions in the response - just log them, don't display
-      if (response.data.ruleDecisions && response.data.ruleDecisions.length > 0) {
-        console.log('Found rule decisions in poll response:', response.data.ruleDecisions);
-        // Don't display rule decisions, they're just indicators
-      }
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error during polling:', error);
-      return null;
-    }
+  // Function to handle rule type selection
+  const handleRuleTypeChange = (ruleType) => {
+    setSelectedRuleTypes({
+      ...selectedRuleTypes,
+      [ruleType]: !selectedRuleTypes[ruleType]
+    });
   };
   
-  // Function to poll for results
-  const pollForResults = async (msgId) => {
-    // Set up polling state
-    setIsPolling(true);
-    setMessageId(msgId);
-    setPollCount(0);
-    setProcessingSteps([]);
-    setPollResponses([]);
-    setCollectedRules([]);
-    
-    // Set initial current step
-    setCurrentStep('Starting polling...');
-    
-    let maxPolls = 30; // Maximum number of polling attempts
-    let pollInterval = 3000; // Polling interval in ms
-    let currentPoll = 0;
-    let timeoutId = null;
-    
-    // Function to perform a single poll cycle
-    const pollCycle = async () => {
-      currentPoll++;
-      setPollCount(currentPoll);
-      
-      try {
-        // Make the poll request
-        const data = await makePollRequest(msgId);
-        
-        if (data) {
-          // Update current step if available
-          if (data.currentStep) {
-            setCurrentStep(data.currentStep);
-            
-            // Add to processing steps if not already there
-            setProcessingSteps(prev => {
-              if (!prev.includes(data.currentStep)) {
-                return [...prev, data.currentStep];
-              }
-              return prev;
-            });
-          }
-          
-          // Process the response and update UI
-          const isDone = processResponseAndUpdateUI(data);
-          
-          // If polling is complete, stop
-          if (isDone) {
-            console.log('Polling complete after', currentPoll, 'attempts');
-            setIsPolling(false);
-            setIsLoading(false);
-            return;
-          }
-        }
-        
-        // Check if we've reached the maximum number of polls
-        if (currentPoll >= maxPolls) {
-          console.log('Reached maximum number of polls:', maxPolls);
-          setIsPolling(false);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Schedule the next poll
-        timeoutId = setTimeout(pollCycle, pollInterval);
-      } catch (error) {
-        console.error('Error during poll cycle:', error);
-        // setCurrentStep(`Error during polling attempt ${currentPoll}, retrying...`);
-        
-        // Continue polling despite errors
-        timeoutId = setTimeout(pollCycle, pollInterval);
-      }
-    };
-    
-    // Process response and update UI immediately with any new rules
-    const processResponseAndUpdateUI = (data) => {
-      // Handle case where data might be directly in the response
-      if (!data) return false;
-      
-      // Check for rule decisions directly in the data - just log them, don't display
-      if (data.ruleDecisions && data.ruleDecisions.length > 0) {
-        console.log('Found rule decisions in processResponseAndUpdateUI:', data.ruleDecisions);
-        // Don't display rule decisions, they're just indicators
-      }
-      
-      // Handle rules in the data
-      if (data.rules && data.rules.length > 0) {
-        // Standard format with rules array
-        // Add new rules to our collection if they don't already exist
-        const newRules = data.rules.filter(newRule => 
-          !collectedRules.some(existingRule => 
-            JSON.stringify(existingRule) === JSON.stringify(newRule)
-          )
-        );
-        
-        if (newRules.length > 0) {
-          // Update our collection with the new rules
-          const updatedRules = [...collectedRules, ...newRules];
-          setCollectedRules(updatedRules);
-          
-          // Update the UI immediately with the new rules
-          setApiResponse({
-            ...data,
-            rules: updatedRules
-          });
-          
-          // Set the first YARA rule if available
-          const yaraRule = newRules.find(r => r.rule_type === 'YARA');
-          if (yaraRule) {
-            setYaraRule(yaraRule.rule_content || yaraRule.rule || '');
-          }
-        }
-        
-        // Only stop polling if we have a COMPLETED status
-        if (data.status === 'COMPLETED') {
-          return true; // Polling complete
-        }
-        return false; // Continue polling
-      } else if (data.rule) {
-        // Format with a single rule
-        setYaraRule(data.rule);
-        setApiResponse(data);
-        
-        // Only stop polling if we have a COMPLETED status
-        if (data.status === 'COMPLETED') {
-          return true; // Polling complete
-        }
-        return false; // Continue polling
-      } else {
-        // If we don't have rules in the expected format, just show what we got
-        // Don't generate a sample rule
-        setApiResponse(data);
-        
-        // Continue polling instead of showing a sample rule
-        return false; // Indicate polling should continue
-      }
-      
-      // If we've reached here, continue polling
-      return false;
-    };
-    
-    // Start the first poll cycle
-    pollCycle();
-    
-    // Clean up on unmount
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  };
-
-  // Helper function to generate a sample YARA rule based on user input and malware name
-  const generateSampleRule = (content, malwareName = '') => {
-    // Extract potential keywords from the content
-    const keywords = content.split(/\\s+/)
-      .filter(word => word.length > 4)
-      .filter(word => !['and', 'the', 'that', 'with', 'from', 'this', 'these', 'those', 'they', 'their'].includes(word.toLowerCase()))
-      .slice(0, 5);
-    
-    // Get current date for the rule
-    const date = new Date().toISOString().split('T')[0];
-    
-    // Generate a rule name based on malware name or default
-    const ruleName = malwareName ? 
-      `${malwareName.replace(/[^a-zA-Z0-9]/g, '_')}_Detection` : 
-      'Demo_Detection_Rule';
-    
-    return `rule ${ruleName} {
-meta:
-    author = "Threat Intel Workshop"
-    description = "Demo rule generated from user content"
-    date = "${date}"
-    reference = "https://example.com/threat-intel"
-    
-strings:
-    $str1 = "${keywords[0] || 'malware'}" nocase
-    $str2 = "${keywords[1] || 'threat'}" nocase
-    $str3 = "${keywords[2] || 'attack'}" nocase
-    
-    // Binary pattern example
-    $hex1 = { 4D 5A 90 00 03 00 00 00 }
-    
-condition:
-    uint16(0) == 0x5A4D and // PE file check
-    filesize < 1MB and
-    (2 of ($str*) or $hex1)
-}`;
-  };
-
   // Function to handle the "Use AI" button click
   const handleUseAI = async (e) => {
     e.preventDefault();
     
+    // Validate input
     if (!securityContent.trim()) {
       setError('Please enter security content to generate detection rules.');
       return;
     }
     
     // Check if at least one rule type is selected
-    const selectedTypes = Object.keys(selectedRuleTypes).filter(type => selectedRuleTypes[type]);
-    if (selectedTypes.length === 0) {
+    if (!Object.values(selectedRuleTypes).some(Boolean)) {
       setError('Please select at least one rule type.');
       return;
     }
     
-    // Reset all states and switch to output view
     setIsLoading(true);
     setError(null);
     setApiResponse(null);
-    setYaraRule('');
-    setPollResponses([]);
-    setExtractedData(null);
-    setResearchQuery('');
-    setResearchReport(null);
-    setExtractedResearchData(null);
-    setCollectedRules([]);
-    setProcessingSteps([]);
-    setCurrentStep('');
-    
-    // Clear any stored rule contents
-    window.ruleContentsSet = new Set();
-    
     setViewMode('output');
     
     try {
-      // Log the submission (as seen in the screenshot)
-      console.log('Submitting content directly to API Gateway...');
+      // Get selected rule types as a comma-separated string
+      const selectedTypes = Object.keys(selectedRuleTypes).filter(key => selectedRuleTypes[key]);
       
-      // Make the initial API call to request rule generation
+      // Log the submission
+      console.log('Submitting content to API Gateway...');
+      console.log('Security Content:', securityContent);
+      console.log('Selected Rule Types:', selectedTypes);
+      
+      // Make API request
       const apiEndpoint = 'https://r90guxvefb.execute-api.us-east-2.amazonaws.com/v1/detection-rules';
       
       const response = await axios.post(apiEndpoint, {
         security_content: securityContent,
-        user_rule_preference: selectedTypes.join(',')
+        rule_types: selectedTypes.join(',')
       });
       
-      // Log the response as seen in the TDL creator frontend
-      console.log('API response received:', response.data);
-      console.log('Response data:', response.data);
+      console.log('API Response:', response.data);
       
-      console.log('Initial API response:', response.data);
-      
-      // Check response format and handle accordingly
-      if (response.data.messageSent === true && response.data.messageId) {
-        // Asynchronous processing - we got a messageId for polling
+      // Check if we have a message ID to poll
+      if (response.data && response.data.messageId) {
         const messageId = response.data.messageId;
-        console.log(`Request accepted with message ID: ${messageId}`);
+        console.log('Message ID for polling:', messageId);
         
         // Start polling for results
-        console.log(`Starting to poll for results with message ID: ${messageId}`);
+        let pollCount = 0;
+        let maxPolls = 20; // Maximum number of polling attempts
+        let pollInterval = 3000; // Initial polling interval (3 seconds)
         
-        // Use the polling function to get updates
-        pollForResults(messageId);
-      } else if (response.data.rule || (response.data.rules && response.data.rules.length > 0)) {
-        // Immediate response with rule(s)
-        setApiResponse(response.data);
-        
-        if (response.data.rule) {
-          setYaraRule(response.data.rule);
-        } else if (response.data.rules) {
-          const yaraRule = response.data.rules.find(r => r.rule_type === 'YARA');
-          if (yaraRule) {
-            setYaraRule(yaraRule.rule_content || yaraRule.rule || '');
+        const pollForResults = async () => {
+          if (pollCount >= maxPolls) {
+            setError('Polling timeout. Please try again later.');
+            setIsLoading(false);
+            return;
           }
-        }
+          
+          try {
+            pollCount++;
+            console.log(`Polling attempt ${pollCount}...`);
+            
+            const pollEndpoint = 'https://r90guxvefb.execute-api.us-east-2.amazonaws.com/v1/poll';
+            const pollResponse = await axios.get(pollEndpoint, {
+              params: { messageId }
+            });
+            
+            console.log('Poll response:', pollResponse.data);
+            
+            // Process the response
+            if (pollResponse.data.rules && pollResponse.data.rules.length > 0) {
+              // We have rules, update the UI
+              setApiResponse(pollResponse.data);
+              setIsLoading(false);
+              
+              // Update progress
+              setWorksheetProgress({
+                ...worksheetProgress,
+                worksheet2: 100
+              });
+              
+              return; // Stop polling
+            } else if (pollResponse.data.status === 'PROCESSING') {
+              // Still processing, update UI with current step if available
+              if (pollResponse.data.currentStep) {
+                setCurrentStep(pollResponse.data.currentStep);
+                setProcessingSteps(prev => {
+                  if (!prev.includes(pollResponse.data.currentStep)) {
+                    return [...prev, pollResponse.data.currentStep];
+                  }
+                  return prev;
+                });
+              }
+              
+              // Continue polling with increasing interval
+              setTimeout(pollForResults, pollInterval);
+              pollInterval = Math.min(pollInterval * 1.5, 10000); // Increase interval up to 10 seconds
+            } else {
+              // Unknown status or error
+              setError('Unexpected response from server. Please try again.');
+              setIsLoading(false);
+            }
+          } catch (error) {
+            console.error('Error polling for results:', error);
+            setError('Error polling for results. Please try again later.');
+            setIsLoading(false);
+          }
+        };
         
-        setIsLoading(false);
+        // Start the polling process
+        setTimeout(pollForResults, 1000);
       } else {
-        // Unexpected response format
-        throw new Error('Unexpected API response format');
+        // No message ID, handle the response directly
+        setApiResponse(response.data);
+        setIsLoading(false);
+        
+        // Update progress
+        if (response.data && response.data.rules && response.data.rules.length > 0) {
+          setWorksheetProgress({
+            ...worksheetProgress,
+            worksheet2: 100
+          });
+        }
       }
     } catch (error) {
-      console.error('Error in initial request:', error);
-      
-      // Show the error and allow the user to try again
-      setError('Error connecting to the rule generation service: ' + 
-              (error.response?.data?.message || error.message));
+      console.error('Error in handleUseAI:', error);
+      setError('There was an error connecting to the API. Please try again later.');
       setIsLoading(false);
-      setViewMode('input'); // Return to input view to let the user try again
     }
   };
   
@@ -413,37 +189,31 @@ condition:
     
     // Calculate progress based on content
     if (securityContent.length > 10) progress += 50;
-    if (yaraRule.length > 50) progress += 50;
+    if (yaraRule.length > 10) progress += 50;
     
-    // Only update if progress has changed
-    if (worksheetProgress.worksheet2 !== progress) {
+    // Update progress in context
+    if (progress !== worksheetProgress.worksheet2) {
       setWorksheetProgress({
         ...worksheetProgress,
         worksheet2: progress
       });
     }
   }, [securityContent, yaraRule, worksheetProgress, setWorksheetProgress]);
-  
-  // Function to handle rule type selection
-  const handleRuleTypeChange = (ruleType) => {
-    setSelectedRuleTypes({
-      ...selectedRuleTypes,
-      [ruleType]: !selectedRuleTypes[ruleType]
-    });
-  };
-  
+
   return (
     <Container className="my-4">
+      <h1 className="mb-4">Worksheet 2: Detection Rules</h1>
+      
       {viewMode === 'input' ? (
         <Card className="mb-4">
-          <Card.Header className="bg-primary text-white">
+          <Card.Header>
             <h4>Worksheet 2: Detection Rule Generation</h4>
           </Card.Header>
           <Card.Body>
-            <p>
-              In this worksheet, you'll learn how to generate detection rules from security content using AI.
-              Enter security information about a threat, and the system will generate appropriate detection rules.
-            </p>
+            <div className="mb-4">
+              <h5>Overview</h5>
+              <p>In this worksheet, you'll learn how to generate detection rules from security content using AI. Enter security information about a threat, and the system will generate appropriate detection rules.</p>
+            </div>
             
             <Form onSubmit={handleUseAI}>
               <Form.Group className="mb-3">
@@ -496,7 +266,7 @@ condition:
         </Card>
       ) : (
         <Card className="mb-4">
-          <Card.Header className="bg-primary text-white">
+          <Card.Header>
             <h4>Detection Rules Output</h4>
           </Card.Header>
           <Card.Body>
@@ -505,24 +275,36 @@ condition:
                 <Spinner animation="border" role="status" variant="primary">
                   <span className="visually-hidden">Loading...</span>
                 </Spinner>
-                <div className="mt-3">
-                  <h5>Generating detection rules...</h5>
-                  {currentStep && (
-                    <p className="text-muted">{currentStep}</p>
-                  )}
-                  {processingSteps.length > 0 && (
-                    <div className="mt-3 text-start">
-                      <h6>Processing Steps:</h6>
-                      <ul className="list-group">
-                        {processingSteps.map((step, index) => (
-                          <li key={index} className="list-group-item">
-                            {step}
-                          </li>
-                        ))}
-                      </ul>
+                <p className="mt-3">Generating detection rules...</p>
+                
+                {currentStep && (
+                  <div className="mt-3">
+                    <p className="mb-2">Current step: {currentStep}</p>
+                    <div className="progress mb-3">
+                      <div 
+                        className="progress-bar" 
+                        role="progressbar" 
+                        style={{ width: `${(pollCount / 20) * 100}%` }}
+                        aria-valuenow={pollCount * 5} 
+                        aria-valuemin="0" 
+                        aria-valuemax="100"
+                      ></div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+                
+                {processingSteps.length > 0 && (
+                  <div className="mt-3 text-start">
+                    <h6>Processing Steps:</h6>
+                    <ul className="list-group">
+                      {processingSteps.map((step, index) => (
+                        <li key={index} className="list-group-item">
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div>
@@ -601,13 +383,22 @@ condition:
                     })}
                   </div>
                 )}
+                
+                <div className="d-flex justify-content-end">
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setViewMode('input')}
+                  >
+                    Back to Input
+                  </button>
+                </div>
               </div>
             )}
           </Card.Body>
         </Card>
       )}
       
-      <div className="d-flex justify-content-between">
+      <div className="d-flex justify-content-between mt-3">
         <Link to="/worksheet-1" className="btn btn-secondary">Previous: Analysis</Link>
         <Link to="/worksheet-3" className="btn btn-primary">Next: Automated Response</Link>
       </div>

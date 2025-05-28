@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Container, Card, Form, Spinner, Alert } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Table } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { useWorkshop } from '../context/WorkshopContext';
 
 const Worksheet3 = () => {
 
@@ -136,7 +137,7 @@ const Worksheet3 = () => {
 
 
   return (
-    <Container className="mt-4 mb-5">
+    <Container className="my-4">
       <h1 className="mb-4">Worksheet 3: Automated Response</h1>
       
       <Card className="mb-4">
