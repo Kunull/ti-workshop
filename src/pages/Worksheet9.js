@@ -2,23 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Spinner, Alert, Row, Col } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
-import MalwareAnalysisHeader from '../components/MalwareAnalysisHeader';
 import axios from 'axios';
 
-const Worksheet2 = () => {
+const Worksheet9 = () => {
   // useWorkshop hook - progress tracking removed
   const { } = useWorkshop();
 
   // State for user input
   const [securityContent, setSecurityContent] = useState('');
-  const [yaraRule, setYaraRule] = useState('');
   
-  // State for rule type selection
-  const [selectedRuleTypes, setSelectedRuleTypes] = useState({
-    YARA: true,
-    SIGMA: false,
-    SNORT: false,
-    SURICATA: false
+  // State for query type selection
+  const [selectedQueryTypes, setSelectedQueryTypes] = useState({
+    SPLUNK: true,
+    KQL: false,
+    EQL: false,
+    SQL: false
   });
   
   // State for API response handling
@@ -40,15 +38,15 @@ const Worksheet2 = () => {
   
   // State for view mode (input or output)
   const [viewMode, setViewMode] = useState('input');
-  
+
   // Helper function to create a delay
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   
-  // Function to handle rule type selection
-  const handleRuleTypeChange = (ruleType) => {
-    setSelectedRuleTypes({
-      ...selectedRuleTypes,
-      [ruleType]: !selectedRuleTypes[ruleType]
+  // Function to handle query type selection
+  const handleQueryTypeChange = (queryType) => {
+    setSelectedQueryTypes({
+      ...selectedQueryTypes,
+      [queryType]: !selectedQueryTypes[queryType]
     });
   };
   
@@ -58,13 +56,13 @@ const Worksheet2 = () => {
     
     // Validate input
     if (!securityContent.trim()) {
-      setError('Please enter security content to generate detection rules.');
+      setError('Please enter a hunting hypothesis to generate detection queries.');
       return;
     }
     
-    // Check if at least one rule type is selected
-    if (!Object.values(selectedRuleTypes).some(Boolean)) {
-      setError('Please select at least one rule type.');
+    // Check if at least one query type is selected
+    if (!Object.values(selectedQueryTypes).some(Boolean)) {
+      setError('Please select at least one query type.');
       return;
     }
     
@@ -74,13 +72,13 @@ const Worksheet2 = () => {
     setViewMode('output');
     
     try {
-      // Get selected rule types as a comma-separated string
-      const selectedTypes = Object.keys(selectedRuleTypes).filter(key => selectedRuleTypes[key]);
+      // Get selected query types as a comma-separated string
+      const selectedTypes = Object.keys(selectedQueryTypes).filter(key => selectedQueryTypes[key]);
       
       // Log the submission
       console.log('Submitting content to API Gateway...');
-      console.log('Security Content:', securityContent);
-      console.log('Selected Rule Types:', selectedTypes);
+      console.log('Hunting Hypothesis:', securityContent);
+      console.log('Selected Query Types:', selectedTypes);
       
       // Make API request
       const apiEndpoint = 'https://r90guxvefb.execute-api.us-east-2.amazonaws.com/v1/detection-rules';
@@ -149,13 +147,14 @@ const Worksheet2 = () => {
               setExtractedResearchData(pollResponse.data.research_data);
             }
             
-            // Process the response
+            // Check if processing is complete
             if (pollResponse.data && pollResponse.data.status === 'COMPLETED') {
-              // Processing complete, update state
-              setApiResponse(pollResponse.data);
-              setIsLoading(false);
+              console.log('Processing completed!');
               
-              // Extract any additional data
+              // Set the API response
+              setApiResponse(pollResponse.data);
+              
+              // Extract any additional data from the response
               if (pollResponse.data.data) {
                 setExtractedData(pollResponse.data.data);
               }
@@ -175,9 +174,12 @@ const Worksheet2 = () => {
                 setExtractedResearchData(pollResponse.data.research_data);
               }
               
+              // Set loading to false
+              setIsLoading(false);
+              
               // Add a processing step for completion
-              setCurrentStep('Detection rules generated successfully!');
-              setProcessingSteps(prev => [...prev, 'Detection rules generated successfully!']);
+              setCurrentStep('Detection queries generated successfully!');
+              setProcessingSteps(prev => [...prev, 'Detection queries generated successfully!']);
               
               // Clear the interval
               clearInterval(pollIntervalId);
@@ -193,7 +195,7 @@ const Worksheet2 = () => {
                 });
               }
             } else if (pollResponse.data && pollResponse.data.status === 'ERROR') {
-              // Error occurred
+              // Error occurred during processing
               setError(pollResponse.data.error || 'An error occurred during processing.');
               setIsLoading(false);
               
@@ -215,85 +217,125 @@ const Worksheet2 = () => {
             // Don't clear the interval - keep polling
           }
         }, 3000); // Poll every 3 seconds
+        
+        // Cleanup function to clear interval if component unmounts
+        return () => clearInterval(pollIntervalId);
       } else {
-        // No message ID, handle the response directly
+        // No message ID to poll, treat as immediate response
         setApiResponse(response.data);
         setIsLoading(false);
       }
     } catch (error) {
-      console.error('Error in handleUseAI:', error);
-      setError('There was an error connecting to the API. Please try again later.');
+      console.error('Error submitting content:', error);
+      setError('Error submitting content. Please try again later.');
       setIsLoading(false);
     }
   };
-  
-  // Update progress when YARA rule content or security content changes
-  useEffect(() => {
-    // Progress tracking removed
-  }, [securityContent, yaraRule]);
 
   return (
     <Container className="my-4">
-      <h1 className="mb-4">Worksheet 2: Detection Rules</h1>
-      
-      <MalwareAnalysisHeader />
+      <h1 className="mb-4">Worksheet 3: Translate to Queries</h1>
       
       {viewMode === 'input' ? (
         <Card className="mb-4">
           <Card.Header>
-            <h4>Worksheet 2: Detection Rule Generation</h4>
+            <h4>Step 1: Translate Hypotheses to Detection Queries</h4>
           </Card.Header>
           <Card.Body>
             <div className="mb-4">
               <h5>Overview</h5>
-              <p>In this worksheet, you'll learn how to generate detection rules from security content using AI. Enter security information about a threat, and the system will generate appropriate detection rules.</p>
+              <p>
+                In this worksheet, you'll translate your hunting hypotheses into specific queries for your detection tools.
+                These queries will be used to search for evidence of the TTPs you've identified in your environment.
+              </p>
             </div>
             
             <Form onSubmit={handleUseAI}>
-              <Form.Group className="mb-3">
-                <Form.Label>Security Content</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label>Enter Hunting Hypothesis</Form.Label>
                 <Form.Control
                   as="textarea"
-                  rows={6}
+                  rows={4}
                   value={securityContent}
                   onChange={(e) => setSecurityContent(e.target.value)}
-                  placeholder="Enter security content, threat information, or malware details here..."
+                  placeholder="Enter your hunting hypothesis here..."
+                  disabled={isLoading}
                 />
                 <Form.Text className="text-muted">
-                  The more detailed information you provide, the better the detection rules will be.
+                  Example: "Adversaries are using PowerShell with encoded commands to execute malicious code and establish persistence"
                 </Form.Text>
               </Form.Group>
               
-              <Form.Group className="mb-3">
-                <Form.Label>Rule Types</Form.Label>
-                <div>
-                  {Object.keys(selectedRuleTypes).map(ruleType => (
-                    <Form.Check
-                      key={ruleType}
-                      inline
-                      type="checkbox"
-                      id={`rule-type-${ruleType}`}
-                      label={ruleType}
-                      checked={selectedRuleTypes[ruleType]}
-                      onChange={() => handleRuleTypeChange(ruleType)}
-                    />
-                  ))}
+              <Form.Group className="mb-4">
+                <Form.Label>Select Query Types</Form.Label>
+                <div className="d-flex flex-wrap">
+                  <Form.Check
+                    type="checkbox"
+                    id="SPLUNK"
+                    label="SPLUNK"
+                    className="me-3 mb-2"
+                    checked={selectedQueryTypes.SPLUNK}
+                    onChange={() => handleQueryTypeChange('SPLUNK')}
+                    disabled={isLoading}
+                  />
+                  <Form.Check
+                    type="checkbox"
+                    id="KQL"
+                    label="KQL (Microsoft Sentinel)"
+                    className="me-3 mb-2"
+                    checked={selectedQueryTypes.KQL}
+                    onChange={() => handleQueryTypeChange('KQL')}
+                    disabled={isLoading}
+                  />
+                  <Form.Check
+                    type="checkbox"
+                    id="EQL"
+                    label="EQL (Elastic)"
+                    className="me-3 mb-2"
+                    checked={selectedQueryTypes.EQL}
+                    onChange={() => handleQueryTypeChange('EQL')}
+                    disabled={isLoading}
+                  />
+                  <Form.Check
+                    type="checkbox"
+                    id="SQL"
+                    label="SQL"
+                    className="me-3 mb-2"
+                    checked={selectedQueryTypes.SQL}
+                    onChange={() => handleQueryTypeChange('SQL')}
+                    disabled={isLoading}
+                  />
                 </div>
-                <Form.Text className="text-muted">
-                  Select the types of detection rules you want to generate.
-                </Form.Text>
               </Form.Group>
               
               {error && (
-                <Alert variant="danger" className="mt-3">
+                <Alert variant="danger" className="mb-4">
                   {error}
                 </Alert>
               )}
               
               <div className="d-flex justify-content-end">
-                <button type="submit" className="btn btn-primary">
-                  Use AI to Generate Rules
-                </button>
+                <Button 
+                  type="submit" 
+                  variant="primary"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Processing...
+                    </>
+                  ) : (
+                    'Generate Detection Queries'
+                  )}
+                </Button>
               </div>
             </Form>
           </Card.Body>
@@ -301,13 +343,14 @@ const Worksheet2 = () => {
       ) : (
         <Card className="mb-4">
           <Card.Header>
-            <h4>Detection Rules Output</h4>
+            <h4>Generated Detection Queries</h4>
+            <p className="text-muted mb-0 small">AI-generated queries based on your hunting hypothesis</p>
           </Card.Header>
           <Card.Body>
             {isLoading ? (
               <div className="p-4">
                 <div className="text-center mb-4">
-                  <h5>Generating Detection Rules...</h5>
+                  <h5>Generating Detection Queries...</h5>
                   <p className="text-muted">This may take a moment...</p>
                 </div>
                 
@@ -389,10 +432,10 @@ const Worksheet2 = () => {
                   </div>
                 )}
                 
-                {/* Display rules as they are received from the API */}
+                {/* Display queries as they are received from the API */}
                 {apiResponse && apiResponse.rules && apiResponse.rules.length > 0 && (
                   <div className="mb-3">
-                    <h6>Generated Rules:</h6>
+                    <h6>Generated Detection Queries:</h6>
                     {apiResponse.rules.map((rule, index) => {
                       // Extract rule content and type
                       const ruleContent = typeof rule === 'string' ? rule : 
@@ -400,12 +443,12 @@ const Worksheet2 = () => {
                                         rule.rule ? rule.rule : 
                                         JSON.stringify(rule, null, 2);
                       
-                      const ruleType = rule.rule_type || 'YARA';
+                      const ruleType = rule.rule_type || 'SPLUNK';
                       
                       return (
                         <div key={index} className="mb-3">
-                          <h6>{ruleType} Rule {index + 1}</h6>
-                          <pre className="bg-light p-3 rounded" style={{ 
+                          <h6>{ruleType} Query {index + 1}</h6>
+                          <pre className="p-3 rounded" style={{ 
                             whiteSpace: 'pre', 
                             overflow: 'auto', 
                             maxHeight: '300px', 
@@ -413,9 +456,10 @@ const Worksheet2 = () => {
                             fontFamily: 'monospace',
                             fontSize: '14px',
                             padding: '15px',
-                            backgroundColor: '#f8f9fa',
-                            border: '1px solid #eaecef',
-                            borderRadius: '6px'
+                            backgroundColor: '#f0f8ff',
+                            border: '1px solid #cce5ff',
+                            borderRadius: '6px',
+                            color: '#004085'
                           }}>
                             <code>{ruleContent}</code>
                           </pre>
@@ -425,13 +469,13 @@ const Worksheet2 = () => {
                   </div>
                 )}
                 
-                <div className="d-flex justify-content-end">
-                  <button 
-                    className="btn btn-secondary" 
+                <div className="d-flex justify-content-end mt-4">
+                  <Button 
+                    variant="outline-primary" 
                     onClick={() => setViewMode('input')}
                   >
-                    Back to Input
-                  </button>
+                    <i className="bi bi-arrow-left me-1"></i> Back to Input
+                  </Button>
                 </div>
               </div>
             )}
@@ -440,11 +484,11 @@ const Worksheet2 = () => {
       )}
       
       <div className="d-flex justify-content-between mt-3">
-        <Link to="/scenario1/worksheet1" className="btn btn-secondary">Previous: Analysis</Link>
-        <Link to="/scenario1/worksheet3" className="btn btn-primary">Next: Automated Response</Link>
+        <Link to="/scenario2/worksheet2" className="btn btn-secondary">Previous: Craft Hunt Hypothesis</Link>
+        <Link to="/scenario2/worksheet4" className="btn btn-primary">Next: Perform Hunting</Link>
       </div>
     </Container>
   );
 };
 
-export default Worksheet2;
+export default Worksheet9;
