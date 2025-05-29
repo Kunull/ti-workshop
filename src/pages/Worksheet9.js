@@ -116,7 +116,7 @@ const Worksheet9 = () => {
         await delay(initialDelay);
         
         // Use setInterval for polling instead of recursive calls
-        const pollIntervalId = setInterval(async () => {
+        let pollIntervalId = setInterval(async () => {
           try {
             // Increment poll count
             setPollCount(prev => {
