@@ -118,6 +118,12 @@ const Worksheet2 = () => {
         await delay(initialDelay);
         
         // Use setInterval for polling instead of recursive calls
+        // Initialize window.intervalIds if it doesn't exist
+        if (!window.intervalIds) {
+          window.intervalIds = [];
+        }
+        
+        // Create interval and store its ID
         let pollIntervalId = setInterval(async () => {
           try {
             // Increment poll count
@@ -181,6 +187,10 @@ const Worksheet2 = () => {
               
               // Clear the interval
               clearInterval(pollIntervalId);
+              // Remove from tracked intervals
+              if (window.intervalIds) {
+                window.intervalIds = window.intervalIds.filter(id => id !== pollIntervalId);
+              }
             } else if (pollResponse.data && pollResponse.data.status === 'PROCESSING') {
               // Still processing, update the current step if available
               if (pollResponse.data.current_step) {
@@ -199,6 +209,10 @@ const Worksheet2 = () => {
               
               // Clear the interval
               clearInterval(pollIntervalId);
+              // Remove from tracked intervals
+              if (window.intervalIds) {
+                window.intervalIds = window.intervalIds.filter(id => id !== pollIntervalId);
+              }
             }
           } catch (error) {
             console.error('Error polling for results:', error);
@@ -215,6 +229,9 @@ const Worksheet2 = () => {
             // Don't clear the interval - keep polling
           }
         }, 3000); // Poll every 3 seconds
+        
+        // Add the interval ID to our tracked list
+        window.intervalIds.push(pollIntervalId);
       } else {
         // No message ID, handle the response directly
         setApiResponse(response.data);
@@ -226,6 +243,16 @@ const Worksheet2 = () => {
       setIsLoading(false);
     }
   };
+  
+  // Effect for cleaning up any active intervals when component unmounts
+  useEffect(() => {
+    // Cleanup function
+    return () => {
+      // Clear any active intervals when component unmounts
+      const intervalIds = window.intervalIds || [];
+      intervalIds.forEach(id => clearInterval(id));
+    };
+  }, []);
   
   // Update progress when YARA rule content or security content changes
   useEffect(() => {

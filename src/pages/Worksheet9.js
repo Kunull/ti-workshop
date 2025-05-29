@@ -50,6 +50,16 @@ const Worksheet9 = () => {
     });
   };
   
+  // Effect for cleaning up any active intervals when component unmounts
+  useEffect(() => {
+    // Cleanup function
+    return () => {
+      // Clear any active intervals when component unmounts
+      const intervalIds = window.intervalIds || [];
+      intervalIds.forEach(id => clearInterval(id));
+    };
+  }, []);
+
   // Function to handle the "Use AI" button click
   const handleUseAI = async (e) => {
     e.preventDefault();
@@ -116,6 +126,12 @@ const Worksheet9 = () => {
         await delay(initialDelay);
         
         // Use setInterval for polling instead of recursive calls
+        // Initialize window.intervalIds if it doesn't exist
+        if (!window.intervalIds) {
+          window.intervalIds = [];
+        }
+        
+        // Create interval and store its ID
         let pollIntervalId = setInterval(async () => {
           try {
             // Increment poll count
@@ -183,6 +199,10 @@ const Worksheet9 = () => {
               
               // Clear the interval
               clearInterval(pollIntervalId);
+              // Remove from tracked intervals
+              if (window.intervalIds) {
+                window.intervalIds = window.intervalIds.filter(id => id !== pollIntervalId);
+              }
             } else if (pollResponse.data && pollResponse.data.status === 'PROCESSING') {
               // Still processing, update the current step if available
               if (pollResponse.data.current_step) {
@@ -201,6 +221,10 @@ const Worksheet9 = () => {
               
               // Clear the interval
               clearInterval(pollIntervalId);
+              // Remove from tracked intervals
+              if (window.intervalIds) {
+                window.intervalIds = window.intervalIds.filter(id => id !== pollIntervalId);
+              }
             }
           } catch (error) {
             console.error('Error polling for results:', error);
@@ -218,8 +242,8 @@ const Worksheet9 = () => {
           }
         }, 3000); // Poll every 3 seconds
         
-        // Cleanup function to clear interval if component unmounts
-        return () => clearInterval(pollIntervalId);
+        // Add the interval ID to our tracked list
+        window.intervalIds.push(pollIntervalId);
       } else {
         // No message ID to poll, treat as immediate response
         setApiResponse(response.data);
