@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { Container, Card, Form, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
+import MalwareAnalysisHeader from '../components/MalwareAnalysisHeader';
 import axios from 'axios';
 
 const Worksheet4 = () => {
-  const { 
-    worksheetProgress,
-    setWorksheetProgress
-  } = useWorkshop();
+  // useWorkshop hook - progress tracking removed
+  const { } = useWorkshop();
   
   const [executiveSummary, setExecutiveSummary] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -72,14 +71,6 @@ const Worksheet4 = () => {
       setError('Failed to generate executive summary. Please try again.');
     } finally {
       setIsLoading(false);
-      
-      // Update progress
-      if (executiveSummary) {
-        setWorksheetProgress({
-          ...worksheetProgress,
-          worksheet4: 100
-        });
-      }
     }
   };
 
@@ -87,18 +78,14 @@ const Worksheet4 = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Update progress if there's content
-    if (executiveSummary.trim().length > 0) {
-      setWorksheetProgress({
-        ...worksheetProgress,
-        worksheet4: 100
-      });
-    }
+    // Progress tracking removed
   };
 
   return (
     <Container className="my-4">
       <h1 className="mb-4">Worksheet 4: Executive Summary</h1>
+      
+      <MalwareAnalysisHeader />
       
       <Card className="mb-4">
         <Card.Header as="h5">Overview</Card.Header>
@@ -171,7 +158,7 @@ const Worksheet4 = () => {
       </Card>
       
       <div className="d-flex justify-content-between">
-        <Link to="/worksheet-3" className="btn btn-secondary">Previous: Automated Response</Link>
+        <Link to="/scenario1/worksheet3" className="btn btn-secondary">Previous: Automated Response</Link>
         <Link to="/" className="btn btn-primary">Return to Home</Link>
       </div>
     </Container>

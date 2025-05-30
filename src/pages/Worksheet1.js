@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
+import { Container, Card, Form, Button, Spinner, Alert, Table } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
+import MalwareAnalysisHeader from '../components/MalwareAnalysisHeader';
 
 const Worksheet1 = () => {
 
   const { 
     threatLandscape,
-    setThreatLandscape,
-    worksheetProgress,
-    setWorksheetProgress
+    setThreatLandscape
   } = useWorkshop();
   
   // Initialize state for analysis fields
@@ -180,27 +179,12 @@ const Worksheet1 = () => {
     }
   };
   
-  // Calculate progress
-  useEffect(() => {
-    // Calculate completion percentage based on filled fields
-    let completedTasks = 0;
-    if (ttpAnalysis.trim()) completedTasks++;
-    if (iocAnalysis.trim()) completedTasks++;
-    if (threatActorAnalysis.trim()) completedTasks++;
-    
-    const percentComplete = Math.round((completedTasks / 3) * 100);
-    
-    // Update progress in context
-    setWorksheetProgress(prevProgress => ({
-      ...prevProgress,
-      worksheet1: percentComplete
-    }));
-  }, [ttpAnalysis, iocAnalysis, threatActorAnalysis, setWorksheetProgress]);
-
   return (
     <Container className="my-4">
       
       <h1 className="mb-4">Worksheet 1: Analysis</h1>
+      
+      <MalwareAnalysisHeader />
       
       <Card className="mb-4">
         <Card.Header as="h5">Overview</Card.Header>
@@ -265,26 +249,80 @@ const Worksheet1 = () => {
             
             {/* Display TTP API response or error */}
             {ttpApiResponse && (
-              <div className="mt-3">
-                <div className="p-3" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px', color: '#0d47a1' }}>
-                  <h5>MITRE ATT&CK TTPs</h5>
-                  {ttpApiResponse && (ttpApiResponse.MITRE_TTPs || (ttpApiResponse.body && ttpApiResponse.body.MITRE_TTPs)) ? (
-                    <>
-                      <p>The AI has identified the following TTPs:</p>
-                      {Object.entries(ttpApiResponse.MITRE_TTPs || (ttpApiResponse.body && ttpApiResponse.body.MITRE_TTPs) || {}).map(([category, techniques]) => (
-                        <div key={category} className="mb-3">
-                          <h6 className="fw-bold" style={{ color: '#0d47a1' }}>{category}</h6>
-                          <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
-                            {techniques.map((technique, index) => (
-                              <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{technique}</div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <p>No specific TTPs were identified. Please provide more detailed information.</p>
-                  )}
+              <div className="mt-4">
+                <Alert variant="success" className="mb-4">
+                  <Alert.Heading>TTPs Identified Successfully</Alert.Heading>
+                  <p>
+                    We've identified the following TTPs based on your analysis. These can be used to develop detection rules in the next step.
+                  </p>
+                </Alert>
+                
+                <h5 className="mb-3">Identified MITRE ATT&CK TTPs</h5>
+                
+                {ttpApiResponse && (ttpApiResponse.MITRE_TTPs || (ttpApiResponse.body && ttpApiResponse.body.MITRE_TTPs)) ? (
+                  <Table striped bordered hover responsive className="mt-3">
+                    <thead className="table-primary">
+                      <tr>
+                        <th width="25%">Tactic</th>
+                        <th width="75%">Technique</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(ttpApiResponse.MITRE_TTPs || (ttpApiResponse.body && ttpApiResponse.body.MITRE_TTPs) || {}).flatMap(([category, techniques]) => 
+                        techniques.map((technique, index) => {
+                          // Extract ID if available (format: T1234 or T1234.001)
+                          const idMatch = technique.match(/T\d+(\.\d+)?/);
+                          
+                          // Format the technique with the ID as a badge if present
+                          let displayTechnique = technique;
+                          if (idMatch) {
+                            const id = idMatch[0];
+                            const cleanTechnique = technique.replace(idMatch[0], '').trim();
+                            displayTechnique = (
+                              <>
+                                <span className="badge bg-secondary me-2">{id}</span>
+                                {cleanTechnique}
+                              </>
+                            );
+                          }
+                          
+                          return (
+                            <tr key={`${category}-${index}`}>
+                              <td>
+                                <strong>{category}</strong>
+                                <br />
+                                <span className="text-muted small">{category === 'Discovery' ? 'TA0007' : 
+                                                                    category === 'Defense Evasion' ? 'TA0005' : 
+                                                                    category === 'Credential Access' ? 'TA0006' : ''}</span>
+                              </td>
+                              <td>{displayTechnique}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </Table>
+                ) : (
+                  <Alert variant="warning">
+                    <div className="d-flex">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                      </svg>
+                      <div>
+                        No specific TTPs were identified. Please provide more detailed information about the threat actor's tactics and techniques.
+                      </div>
+                    </div>
+                  </Alert>
+                )}
+                
+                <div className="d-flex justify-content-end mt-4">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => setTtpApiResponse(null)}
+                    className="me-2"
+                  >
+                    Reset
+                  </Button>
                 </div>
               </div>
             )}
@@ -352,40 +390,106 @@ const Worksheet1 = () => {
             
             {/* Display IOC API response or error */}
             {iocApiResponse && (
-              <div className="mt-3">
-                <div className="p-3" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px', color: '#0d47a1' }}>
-                  <h5>Registry Modifications</h5>
-                  
-                  <h6 className="mt-3" style={{ color: '#0d47a1' }}>Registry Keys Created:</h6>
-                  <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+              <div className="mt-4">
+                <Alert variant="success" className="mb-4">
+                  <Alert.Heading>Registry Modifications Identified</Alert.Heading>
+                  <p>
+                    We've identified the following registry modifications made by the malware. These can be used as indicators of compromise for detection.
+                  </p>
+                </Alert>
+                
+                <h5 className="mb-3">Registry Keys Created</h5>
+                <Table striped bordered hover responsive className="mt-3 mb-4">
+                  <thead className="table-primary">
+                    <tr>
+                      <th width="10%">#</th>
+                      <th width="90%">Registry Key</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {iocApiResponse.registry_modifications.keys_created.map((key, index) => (
-                      <div key={`key-${index}`} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><code>{key}</code></div>
+                      <tr key={`key-${index}`}>
+                        <td className="text-center">{index + 1}</td>
+                        <td>
+                          <code className="text-danger">{key}</code>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                  
-                  <h6 className="mt-3" style={{ color: '#0d47a1' }}>Registry Values Created:</h6>
-                  <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
-                    {iocApiResponse.registry_modifications.key_values_modified.map((value, index) => (
-                      <div key={`mod-${index}`} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>
-                        <div><strong>Key Path:</strong> <code>{value.key_path}</code></div>
-                        <div><strong>Name:</strong> {value.name}</div>
-                        <div><strong>Type:</strong> {value.type}</div>
-                        <div>
-                          <strong>Data:</strong> {value.type === 'binary' ? (
-                            <div>
-                              <div><strong>Old:</strong> <small className="text-muted">[Binary data]</small></div>
-                              <div><strong>New:</strong> <small className="text-muted">[Binary data]</small></div>
-                            </div>
+                  </tbody>
+                </Table>
+                
+                <h5 className="mb-3">Registry Values Modified</h5>
+                {iocApiResponse.registry_modifications.key_values_modified.map((value, index) => (
+                  <Card key={`mod-${index}`} className="mb-3 border-primary">
+                    <Card.Header className="bg-light">
+                      <strong>Registry Value #{index + 1}</strong>
+                    </Card.Header>
+                    <Card.Body>
+                      <Table striped bordered hover responsive className="mb-0">
+                        <tbody>
+                          <tr>
+                            <td width="20%"><strong>Key Path</strong></td>
+                            <td width="80%">
+                              <code className="text-danger">{value.key_path}</code>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>Name</strong></td>
+                            <td>{value.name}</td>
+                          </tr>
+                          <tr>
+                            <td><strong>Type</strong></td>
+                            <td>
+                              <span className="badge bg-secondary">{value.type}</span>
+                            </td>
+                          </tr>
+                          {value.type === 'binary' ? (
+                            <>
+                              <tr>
+                                <td><strong>Old Value</strong></td>
+                                <td>
+                                  <div className="d-flex align-items-center">
+                                    <span className="badge bg-secondary me-2">Binary</span>
+                                    <code className="text-muted">{value.old_data || "[No data]"}</code>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td><strong>New Value</strong></td>
+                                <td>
+                                  <div className="d-flex align-items-center">
+                                    <span className="badge bg-secondary me-2">Binary</span>
+                                    <code className="text-muted">{value.new_data || "[No data]"}</code>
+                                  </div>
+                                </td>
+                              </tr>
+                            </>
                           ) : (
                             <>
-                              <div><strong>Old:</strong> <code>{value.old_data}</code></div>
-                              <div><strong>New:</strong> <code>{value.new_data}</code></div>
+                              <tr>
+                                <td><strong>Old Value</strong></td>
+                                <td><code>{value.old_data}</code></td>
+                              </tr>
+                              <tr>
+                                <td><strong>New Value</strong></td>
+                                <td><code>{value.new_data}</code></td>
+                              </tr>
                             </>
                           )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        </tbody>
+                      </Table>
+                    </Card.Body>
+                  </Card>
+                ))}
+                
+                <div className="d-flex justify-content-end mt-4">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => setIocApiResponse(null)}
+                    className="me-2"
+                  >
+                    Reset
+                  </Button>
                 </div>
               </div>
             )}
@@ -454,49 +558,124 @@ const Worksheet1 = () => {
             
             {/* Display API response or error */}
             {threatActorApiResponse && (
-              <div className="mt-3">
-                <div className="p-3" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px', color: '#0d47a1' }}>
-                  <h5>AI Analysis</h5>
-                  <p>The AI has identified the following threat actor:</p>
-                  
-                  {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor) && (
-                    <div className="mt-2">
-                      <h6 style={{ color: '#0d47a1' }}>Threat Actor Profile:</h6>
-                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
-                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>Alias:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).alias}</div>
-                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>Developer of:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).developer_of}</div>
-                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>First observed:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).first_observed_advertising}</div>
-                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>Motive:</strong> {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).motive}</div>
-                      </div>
-                      
-                      <h6 style={{ color: '#0d47a1' }}>Communication Channels:</h6>
-                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+              <div className="mt-4">
+                <Alert variant="success" className="mb-4">
+                  <Alert.Heading>Threat Actor Identified Successfully</Alert.Heading>
+                  <p>
+                    We've identified the following threat actor based on your analysis. This information can help with attribution and understanding the threat landscape.
+                  </p>
+                </Alert>
+                
+                <h5 className="mb-3">Threat Actor Profile</h5>
+                
+                {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor) && (
+                  <>
+                    <Table striped bordered hover responsive className="mt-3 mb-4">
+                      <thead className="table-primary">
+                        <tr>
+                          <th width="30%">Attribute</th>
+                          <th width="70%">Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>Alias</strong></td>
+                          <td>
+                            <span className="badge bg-dark me-2">
+                              {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).alias}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>Developer of</strong></td>
+                          <td>{(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).developer_of}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>First observed</strong></td>
+                          <td>{(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).first_observed_advertising}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Motive</strong></td>
+                          <td>
+                            <span className="badge bg-danger me-2">
+                              {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).motive}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>Geographical Targeting</strong></td>
+                          <td>{(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).geographical_targeting_preference}</td>
+                        </tr>
+                      </tbody>
+                    </Table>
+                    
+                    <h5 className="mb-3">Communication Channels</h5>
+                    <Table striped bordered hover responsive className="mt-3 mb-4">
+                      <thead className="table-primary">
+                        <tr>
+                          <th>Channel</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).current_communication_channels.map((channel, index) => (
-                          <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{channel}</div>
+                          <tr key={index}>
+                            <td>
+                              <i className="bi bi-chat-dots me-2"></i>
+                              {channel}
+                            </td>
+                          </tr>
                         ))}
-                      </div>
-                      
-                      <h6 style={{ color: '#0d47a1' }}>Aliases Used on Forums:</h6>
-                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                      </tbody>
+                    </Table>
+                    
+                    <h5 className="mb-3">Forum Aliases</h5>
+                    <Table striped bordered hover responsive className="mt-3 mb-4">
+                      <thead className="table-primary">
+                        <tr>
+                          <th width="30%">Forum</th>
+                          <th width="70%">Alias</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {Object.entries((threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).aliases_used_on_forums).map(([forum, alias], index) => (
-                          <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}><strong>{forum}:</strong> {alias}</div>
+                          <tr key={index}>
+                            <td><strong>{forum}</strong></td>
+                            <td>{alias}</td>
+                          </tr>
                         ))}
-                      </div>
-                      
-                      <h6 style={{ color: '#0d47a1' }}>Malware Characteristics:</h6>
-                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
+                      </tbody>
+                    </Table>
+                    
+                    <h5 className="mb-3">Malware Characteristics</h5>
+                    <Table striped bordered hover responsive className="mt-3">
+                      <thead className="table-primary">
+                        <tr>
+                          <th>Characteristic</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).malware_characteristics_developed.map((characteristic, index) => (
-                          <div key={index} className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{characteristic}</div>
+                          <tr key={index}>
+                            <td>
+                              <i className="bi bi-bug me-2"></i>
+                              {characteristic}
+                            </td>
+                          </tr>
                         ))}
-                      </div>
-                      
-                      <h6 style={{ color: '#0d47a1' }}>Geographical Targeting:</h6>
-                      <div className="p-2" style={{ backgroundColor: '#d4e8ff', borderRadius: '4px' }}>
-                        <div className="p-2 mb-1" style={{ backgroundColor: '#e6f7ff', borderRadius: '4px' }}>{(threatActorApiResponse.body?.threat_actor || threatActorApiResponse.threat_actor).geographical_targeting_preference}</div>
-                      </div>
+                      </tbody>
+                    </Table>
+                    
+                    <div className="d-flex justify-content-end mt-4">
+                      <Button 
+                        variant="secondary" 
+                        onClick={() => setThreatActorApiResponse(null)}
+                        className="me-2"
+                      >
+                        Reset
+                      </Button>
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             )}
             
@@ -512,9 +691,9 @@ const Worksheet1 = () => {
         </Card.Body>
       </Card>
       
-      <div className="d-flex justify-content-between">
+      <div className="d-flex justify-content-between mt-3">
         <Link to="/" className="btn btn-secondary">Back to Home</Link>
-        <Link to="/worksheet-2" className="btn btn-primary">Next: Detection Rules</Link>
+        <Link to="/scenario1/worksheet2" className="btn btn-primary">Next: Detection Rules</Link>
       </div>
     </Container>
   );

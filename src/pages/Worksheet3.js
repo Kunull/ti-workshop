@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Table } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWorkshop } from '../context/WorkshopContext';
+import MalwareAnalysisHeader from '../components/MalwareAnalysisHeader';
 
 const Worksheet3 = () => {
 
@@ -139,6 +140,8 @@ const Worksheet3 = () => {
   return (
     <Container className="my-4">
       <h1 className="mb-4">Worksheet 3: Automated Response</h1>
+      
+      <MalwareAnalysisHeader />
       
       <Card className="mb-4">
         <Card.Header as="h5">Overview</Card.Header>
@@ -424,8 +427,8 @@ const Worksheet3 = () => {
 
       
       <div className="d-flex justify-content-between">
-        <Link to="/worksheet-2" className="btn btn-secondary">Previous: Detection Rules</Link>
-        <Link to="/worksheet-4" className="btn btn-primary">Next: Intelligence Sharing</Link>
+        <Link to="/scenario1/worksheet2" className="btn btn-secondary">Previous: Detection Rules</Link>
+        <Link to="/scenario1/worksheet4" className="btn btn-primary">Next: Intelligence Sharing</Link>
       </div>
     </Container>
   );

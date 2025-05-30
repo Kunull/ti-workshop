@@ -102,13 +102,7 @@ export const WorkshopProvider = ({ children }) => {
     finalReport: ''
   });
 
-  // Progress tracking
-  const [worksheetProgress, setWorksheetProgress] = useState({
-    worksheet1: 0, // Analysis
-    worksheet2: 0, // Detection Rules
-    worksheet3: 0, // Automated Response
-    worksheet4: 0  // Intelligence Sharing
-  });
+  // Removed progress tracking as per user request
 
   // User information
   const [userInfo, setUserInfo] = useState({
@@ -155,9 +149,7 @@ export const WorkshopProvider = ({ children }) => {
     reportGeneration,
     setReportGeneration,
     
-    // Progress tracking
-    worksheetProgress,
-    setWorksheetProgress,
+    // Progress tracking removed as per user request
     
     // User info
     userInfo,

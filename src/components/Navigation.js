@@ -8,7 +8,7 @@ import './navigation.css';
 const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { worksheetProgress } = useWorkshop();
+  // Progress tracking removed as per user request
   const { currentUser, logout } = useAuth();
   
   // State for dropdown visibility
@@ -28,6 +28,9 @@ const Navigation = () => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
       }
+      if (scenarioRef.current && !scenarioRef.current.contains(event.target)) {
+        setScenarioOpen(false);
+      }
     }
     
     document.addEventListener('mousedown', handleClickOutside);
@@ -40,13 +43,15 @@ const Navigation = () => {
   useEffect(() => {
     setWorksheetOpen(false);
     setProfileOpen(false);
+    setScenarioOpen(false);
   }, [location.pathname]);
   
-  // Calculate total progress
-  const totalProgress = Math.floor(
-    (worksheetProgress.worksheet1 + worksheetProgress.worksheet2 + worksheetProgress.worksheet3 + 
-     worksheetProgress.worksheet4) / 4
-  );
+  // State for current scenario
+  const [currentScenario, setCurrentScenario] = useState(1);
+  const [scenarioOpen, setScenarioOpen] = useState(false);
+  const scenarioRef = useRef(null);
+
+  // Progress tracking removed as per user request
 
   const goToHome = () => {
     navigate('/');
@@ -66,8 +71,15 @@ const Navigation = () => {
       <Container>
         <Navbar.Brand onClick={goToHome} className="d-flex align-items-center" style={{ cursor: 'pointer' }}>
           <div>
-            <span className="fw-bold fs-4">Scenario 1: From Sandbox to Action – Malware Incident Analysis</span>
-            <div className="brand-tagline" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)' }}>A day in the life of an Intel Analyst</div>
+            <span className="fw-bold fs-4">
+              {currentScenario === 1 ? "Scenario 1" : "Scenario 2"}
+            </span>
+            <div className="brand-tagline" style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+              {currentScenario === 1 ? 
+                "From Sandbox to Action – Malware Incident Analysis" :
+                "Threat Intel-Driven Hunting"
+              }
+            </div>
           </div>
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" className="border-0 shadow-none" />
@@ -86,6 +98,42 @@ const Navigation = () => {
               </div>
             </Link>
             
+            <div className="custom-dropdown mx-2" ref={scenarioRef}>
+              <button 
+                className="dropdown-button d-flex align-items-center" 
+                onClick={() => setScenarioOpen(!scenarioOpen)}
+                aria-expanded={scenarioOpen}
+                aria-haspopup="true"
+              >
+                <svg className="me-2" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 6H20M4 12H20M4 18H20" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Scenarios
+              </button>
+              <div className={`dropdown-content ${scenarioOpen ? 'show' : ''}`}>
+                <button 
+                  onClick={() => {
+                    setCurrentScenario(1);
+                    navigate('/scenario1/worksheet1');
+                  }} 
+                  className={`dropdown-item ${currentScenario === 1 ? 'active' : ''}`}
+                  style={{ color: 'black' }}
+                >
+                  Scenario 1: Malware Incident Analysis
+                </button>
+                <button 
+                  onClick={() => {
+                    setCurrentScenario(2);
+                    navigate('/scenario2/worksheet1');
+                  }} 
+                  className={`dropdown-item ${currentScenario === 2 ? 'active' : ''}`}
+                  style={{ color: 'black' }}
+                >
+                  Scenario 2: Threat Intel-Driven Hunting
+                </button>
+              </div>
+            </div>
+            
             <div className="custom-dropdown mx-2" ref={worksheetRef}>
               <button 
                 className="dropdown-button d-flex align-items-center" 
@@ -100,61 +148,75 @@ const Navigation = () => {
                 Worksheets
               </button>
               <div className={`dropdown-content ${worksheetOpen ? 'show' : ''}`}>
-                <Link 
-                  to="/worksheet-1" 
-                  className="dropdown-item" 
-                  style={{ color: 'black' }}
-                >
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span>1. Analysis</span>
-                    <small className="text-muted">{worksheetProgress.worksheet1}%</small>
-                  </div>
-                  <div className="progress" style={{ height: '4px' }}>
-                    <div className="progress-bar" style={{ width: `${worksheetProgress.worksheet1}%` }}></div>
-                  </div>
-                </Link>
-                
-                <Link 
-                  to="/worksheet-2" 
-                  className="dropdown-item" 
-                  style={{ color: 'black' }}
-                >
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span>2. Detection Rules</span>
-                    <small className="text-muted">{worksheetProgress.worksheet2}%</small>
-                  </div>
-                  <div className="progress" style={{ height: '4px' }}>
-                    <div className="progress-bar" style={{ width: `${worksheetProgress.worksheet2}%` }}></div>
-                  </div>
-                </Link>
-                
-                <Link 
-                  to="/worksheet-3" 
-                  className="dropdown-item" 
-                  style={{ color: 'black' }}
-                >
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span>3. Automated Response</span>
-                    <small className="text-muted">{worksheetProgress.worksheet3}%</small>
-                  </div>
-                  <div className="progress" style={{ height: '4px' }}>
-                    <div className="progress-bar" style={{ width: `${worksheetProgress.worksheet3}%` }}></div>
-                  </div>
-                </Link>
-                
-                <Link 
-                  to="/worksheet-4" 
-                  className="dropdown-item" 
-                  style={{ color: 'black' }}
-                >
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span>4. Intelligence Sharing</span>
-                    <small className="text-muted">{worksheetProgress.worksheet4}%</small>
-                  </div>
-                  <div className="progress" style={{ height: '4px' }}>
-                    <div className="progress-bar" style={{ width: `${worksheetProgress.worksheet4}%` }}></div>
-                  </div>
-                </Link>
+                {currentScenario === 1 ? (
+                  <>
+                    <Link 
+                      to="/scenario1/worksheet1" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>1. TTP Analysis</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/scenario1/worksheet2" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>2. Detection Rules</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/scenario1/worksheet3" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>3. Automated Response</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/scenario1/worksheet4" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>4. Intelligence Sharing</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      to="/scenario2/worksheet1" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>1. Identify Sector-Specific TTPs</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/scenario2/worksheet2" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>2. Craft Hunt Hypothesis</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/scenario2/worksheet3" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>3. Translate to Queries</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/scenario2/worksheet4" 
+                      className="dropdown-item" 
+                      style={{ color: 'black' }}
+                    >
+                      <span>4. Perform Hunting</span>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           
